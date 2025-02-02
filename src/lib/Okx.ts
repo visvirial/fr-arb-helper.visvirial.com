@@ -1,5 +1,10 @@
 
-export class Okx extends EventTarget {
+import {
+	TableData,
+} from '@/lib/util';
+import { IExchange } from '@/lib/IExchange';
+
+export class Okx extends EventTarget implements IExchange {
 	
 	private _ws = new WebSocket(this.wsEndpoint);
 	private _initWsPromise: Promise<void>;
@@ -151,6 +156,20 @@ export class Okx extends EventTarget {
 			op: 'unsubscribe',
 			args,
 		}));
+	}
+	
+	public get tableData(): TableData[] {
+		const tableData: TableData[] = [];
+		for(const instId in this.frs) {
+			tableData.push({
+				exchange: 'OKX',
+				symbol: instId.split('-')[0],
+				fr: +this.frs[instId].fundingRate * 3 * 365 * 100,
+				markPrice: +this.markPrices[instId].markPx,
+				indexPrice: +this.indexPrices[instId.replace('-SWAP', '')].idxPx,
+			});
+		}
+		return tableData;
 	}
 	
 }

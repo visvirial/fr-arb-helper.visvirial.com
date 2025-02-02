@@ -1,4 +1,9 @@
 
+import {
+	TableData,
+} from '@/lib/util';
+import { IExchange } from '@/lib/IExchange';
+
 export interface HLDataMeta {
 	name: string;
 	szDecimals: number;
@@ -26,7 +31,7 @@ export type HLDataMetaAndAssetCtxs = [
 	HLDataAssetCtxs[],
 ];
 
-export class Hyperliquid extends EventTarget {
+export class Hyperliquid extends EventTarget implements IExchange {
 	
 	private _metaAndAssetCtxs: HLDataMetaAndAssetCtxs = [
 		{
@@ -78,6 +83,23 @@ export class Hyperliquid extends EventTarget {
 	
 	public get metaAndAssetCtxs() {
 		return this._metaAndAssetCtxs;
+	}
+	
+	public get tableData(): TableData[] {
+		const tableData: TableData[] = [];
+		const [metas, assetCtxs] = this.metaAndAssetCtxs;
+		for(let i=0; i<metas.universe.length; i++) {
+			const meta = metas.universe[i];
+			const assetCtx = assetCtxs[i];
+			tableData.push({
+				exchange: 'Hyperliquid',
+				symbol: meta.name,
+				fr: +assetCtx.funding * 24 * 365 * 100,
+				markPrice: +assetCtx.markPx,
+				indexPrice: +assetCtx.oraclePx,
+			});
+		}
+		return tableData;
 	}
 	
 }

@@ -15,52 +15,24 @@ import Paper from '@mui/material/Paper';
 
 import {
 	numberToHR,
+	TableData,
 } from '@/lib/util';
+import { IExchange } from '@/lib/IExchange';
 import { Hyperliquid } from '@/lib/Hyperliquid';
 import { Okx } from '@/lib/Okx';
-
-interface TableData {
-	exchange: string;
-	symbol: string;
-	fr: number;
-	markPrice: number;
-	indexPrice: number;
-}
 
 export default function Home() {
 	const [tableData, setTableData] = useState<TableData[]>([]);
 	useEffect(() => {
-		const hyperliquid = new Hyperliquid();
-		const okx = new Okx();
+		const exchanges: IExchange[] = [
+			new Hyperliquid(),
+			new Okx(),
+		];
 		const recomputeTableData = () => {
 			const tableData: TableData[] = [];
-			// Handle for Hyperliquid.
-			{
-				const [metas, assetCtxs] = hyperliquid.metaAndAssetCtxs;
-				for(let i=0; i<metas.universe.length; i++) {
-					const meta = metas.universe[i];
-					const assetCtx = assetCtxs[i];
-					tableData.push({
-						exchange: 'Hyperliquid',
-						symbol: meta.name,
-						fr: +assetCtx.funding * 24 * 365 * 100,
-						markPrice: +assetCtx.markPx,
-						indexPrice: +assetCtx.oraclePx,
-					});
-				}
-			}
-			// Handle for OKX.
-			{
-				for(const instId in okx.frs) {
-					tableData.push({
-						exchange: 'OKX',
-						symbol: instId.split('-')[0],
-						fr: +okx.frs[instId].fundingRate * 3 * 365 * 100,
-						markPrice: +okx.markPrices[instId].markPx,
-						indexPrice: +okx.indexPrices[instId.replace('-SWAP', '')].idxPx,
-					});
-				}
-			}
+			exchanges.forEach((exchange) => {
+				tableData.push(...exchange.tableData);
+			});
 			// Sort.
 			tableData.sort((a, b) => {
 				return b.fr - a.fr;
@@ -68,13 +40,11 @@ export default function Home() {
 			setTableData(tableData);
 		};
 		(async () => {
-			await hyperliquid.init();
-			await okx.init();
+			await Promise.all(exchanges.map((exchange) => exchange.init()));
 			setInterval(recomputeTableData, 100);
 		})();
 		return () => {
-			hyperliquid.destroy();
-			okx.destroy();
+			exchanges.forEach((exchange) => exchange.destroy());
 		};
 	}, []);
 	return (
