@@ -50,58 +50,62 @@ export class Hyperliquid {
 export interface TableData {
 	exchange: string;
 	symbol: string;
-	decimals: number;
 	fr: number;
 	markPrice: number;
 	indexPrice: number;
 }
 
 export default function Home() {
-	const hyperliquid = new Hyperliquid();
-	const rawData = {
-		hyperliquid: [
-			{
-				universe: [],
-			},
-			[],
-		],
-	};
 	const [tableData, setTableData] = useState([]);
-	const recomputeTableData = () => {
-		const tableData = [];
-		// Handle for Hyperliquid.
-		for(let i=0; i<rawData.hyperliquid[0].universe.length; i++) {
-			const meta = rawData.hyperliquid[0].universe[i];
-			const assetCtxs = rawData.hyperliquid[1][i];
-			tableData.push({
-				exchange: 'Hyperliquid',
-				symbol: meta.name,
-				decimals: +meta.szDecimals,
-				fr: +assetCtxs.funding * 24 * 365 * 100,
-				markPrice: +assetCtxs.markPx,
-				indexPrice: +assetCtxs.oraclePx,
-			});
-		}
-		tableData.sort((a, b) => {
-			return b.fr - a.fr;
-		});
-		setTableData(tableData);
-	};
-	const updateHL = async () => {
-		rawData.hyperliquid = await hyperliquid.fetch({
-			type: 'metaAndAssetCtxs',
-		});
-	};
 	useEffect(() => {
+		const rawData = {
+			hyperliquid: [
+				{
+					universe: [],
+				},
+				[],
+			],
+		};
+		const recomputeTableData = () => {
+			const tableData = [];
+			// Handle for Hyperliquid.
+			for(let i=0; i<rawData.hyperliquid[0].universe.length; i++) {
+				const meta = rawData.hyperliquid[0].universe[i];
+				const assetCtxs = rawData.hyperliquid[1][i];
+				tableData.push({
+					exchange: 'Hyperliquid',
+					symbol: meta.name,
+					fr: +assetCtxs.funding * 24 * 365 * 100,
+					markPrice: +assetCtxs.markPx,
+					indexPrice: +assetCtxs.oraclePx,
+				});
+			}
+			// Sort.
+			tableData.sort((a, b) => {
+				return b.fr - a.fr;
+			});
+			setTableData(tableData);
+		};
+		const hyperliquid = new Hyperliquid();
+		const updateHL = async () => {
+			rawData.hyperliquid = await hyperliquid.fetch({
+				type: 'metaAndAssetCtxs',
+			});
+		};
+		// Initial update.
 		(async () => {
 			await updateHL();
 			recomputeTableData();
 		})();
+		// Periodic update.
+		const interval = setInterval(async () => {
+			await updateHL();
+			recomputeTableData();
+		}, 5 * 1000);
+		return () => {
+			clearInterval(interval);
+		};
 	}, []);
-	useInterval(async () => {
-		await updateHL();
-		recomputeTableData();
-	}, 5 * 1000);
 	return (
 		<div>
 			<h1 style={{
