@@ -30,7 +30,7 @@ export default function RootLayout({
 				className={`${geistSans.variable} ${geistMono.variable} antialiased`}
 			>
 				<AppRouterCacheProvider>
-					<Container maxWidth="md">
+					<Container maxWidth="lg">
 						{children}
 					</Container>
 				</AppRouterCacheProvider>

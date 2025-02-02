@@ -8,19 +8,18 @@ import {
 	useInterval,
 } from 'react-use';
 
-import WebSocket from 'ws';
-
 import TableContainer from '@mui/material/TableContainer';
 import Table from '@mui/material/Table';
 import TableHead from '@mui/material/TableHead';
 import TableBody from '@mui/material/TableBody';
 import TableRow from '@mui/material/TableRow';
 import TableCell from '@mui/material/TableCell';
+import Paper from '@mui/material/Paper';
 
 export function numberToHR(n: number, digits: number = 5) {
 	const pow = Math.floor(Math.log10(n)) + 1;
 	n = (n / Math.pow(10, pow)).toFixed(digits) * Math.pow(10, pow);
-	const fractionDigits = Math.min(digits - pow, digits);
+	const fractionDigits = Math.max(digits - pow, 0);
 	return n.toLocaleString(undefined, {
 		minimumFractionDigits: fractionDigits,
 		maximumFractionDigits: fractionDigits,
@@ -109,6 +108,155 @@ export class Hyperliquid extends EventTarget {
 	
 }
 
+export class Okx extends EventTarget {
+	
+	private _ws = new WebSocket(this.wsEndpoint);
+	private _initWsPromise: Promise<void>;
+	
+	private _instruments: any[] = [];
+	private _frs: { [instId: string]: any } = {};
+	private _markPrices: { [instId: string]: any } = {};
+	private _indexPrices: { [instId: string]: any } = {};
+	
+	constructor(
+		public readonly restEndpoint: string = 'https://www.okx.com',
+		public readonly wsEndpoint: string = 'wss://ws.okx.com:8443/ws/v5/public',
+	) {
+		super();
+		this._initWsPromise = new Promise<void>((resolve, reject) => {
+			this._ws.onopen = resolve;
+			this._ws.onerror = reject;
+		});
+	}
+	
+	public async init() {
+		// Fetch the instruments.
+		this._instruments = await this.fetch('/api/v5/public/instruments', {
+			instType: 'SWAP',
+		});
+		// Fetch the mark prices.
+		const markPrices = await this.fetch('/api/v5/public/mark-price', {
+			instType: 'SWAP',
+		});
+		for(const markPrice of markPrices) {
+			this._markPrices[markPrice.instId] = markPrice;
+		}
+		// Fetch the index prices.
+		const indexPrices = await this.fetch('/api/v5/market/index-tickers', {
+			quoteCcy: 'USDT',
+		});
+		for(const indexPrice of indexPrices) {
+			this._indexPrices[indexPrice.instId] = indexPrice;
+		}
+		// Wait for the WebSocket to open.
+		await this._initWsPromise;
+		this._ws.onmessage = (event) => {
+			const data = JSON.parse(event.data);
+			if(data.event === 'subscribe') {
+				return;
+			}
+			//console.log(data);
+			switch(data.arg.channel) {
+				case 'instruments':
+					this._instruments = data.data;
+					break;
+				case 'funding-rate':
+					this._frs[data.arg.instId] = data.data[0];
+					this.dispatchEvent(new Event('funding-rate'));
+					break;
+				case 'mark-price':
+					this._markPrices[data.arg.instId] = data.data[0];
+					this.dispatchEvent(new Event('mark-price'));
+					break;
+				case 'index-tickers':
+					this._indexPrices[data.arg.instId] = data.data[0];
+					this.dispatchEvent(new Event('index-price'));
+					break;
+			}
+		};
+		// Subscribe to the instruments.
+		this.subscribe([
+			{
+				channel: 'instruments',
+				instType: 'SWAP',
+			},
+		]);
+		// Get the USDT-SWAP instrument IDs.
+		const instIds = this._instruments.map((inst) => inst.instId).filter((instId) => instId.endsWith('-USDT-SWAP'));
+		// Subscribe to the funding rates.
+		this.subscribe(
+			instIds.map((instId) => ({
+				channel: 'funding-rate',
+				instId,
+			})),
+		);
+		// Subscribe to the mark price.
+		this.subscribe(
+			instIds.map((instId) => ({
+				channel: 'mark-price',
+				instId,
+			})),
+		);
+		// Subscribe to the index price.
+		this.subscribe(
+			instIds.map((instId) => ({
+				channel: 'index-tickers',
+				instId: instId.replace('-SWAP', ''),
+			})),
+		);
+	}
+	
+	public async destroy() {
+		this._ws.close();
+	}
+	
+	public get instruments() {
+		return this._instruments;
+	}
+	
+	public get frs() {
+		return this._frs;
+	}
+	
+	public get markPrices() {
+		return this._markPrices;
+	}
+	
+	public get indexPrices() {
+		return this._indexPrices;
+	}
+	
+	public async fetch(path: string, query: any) {
+		const queryStr = new URLSearchParams(query).toString();
+		const url = `${this.restEndpoint}${path}` + (queryStr ? `?${queryStr}` : '');
+		const result = await (await fetch(url, {
+			method: 'GET',
+			headers: {
+				'Content-Type': 'application/json',
+			},
+		})).json();
+		if(result.code !== '0') {
+			throw new Error(result.msg);
+		}
+		return result.data;
+	}
+	
+	public subscribe(args: any[]) {
+		this._ws.send(JSON.stringify({
+			op: 'subscribe',
+			args,
+		}));
+	}
+	
+	public unsubscribe(args: any[]) {
+		this._ws.send(JSON.stringify({
+			op: 'unsubscribe',
+			args,
+		}));
+	}
+	
+}
+
 export interface TableData {
 	exchange: string;
 	symbol: string;
@@ -121,6 +269,7 @@ export default function Home() {
 	const [tableData, setTableData] = useState([]);
 	useEffect(() => {
 		const hyperliquid = new Hyperliquid();
+		const okx = new Okx();
 		const recomputeTableData = () => {
 			const tableData = [];
 			// Handle for Hyperliquid.
@@ -138,18 +287,34 @@ export default function Home() {
 					});
 				}
 			}
+			// Handle for OKX.
+			{
+				for(const instId in okx.frs) {
+					const fr = okx.frs[instId];
+					const inst = okx.instruments.find((inst) => inst.instId === instId);
+					tableData.push({
+						exchange: 'OKX',
+						symbol: instId.split('-')[0],
+						fr: +fr.fundingRate * 3 * 365 * 100,
+						markPrice: +okx.markPrices[instId].markPx,
+						indexPrice: +okx.indexPrices[instId.replace('-SWAP', '')].idxPx,
+					});
+				}
+			}
 			// Sort.
 			tableData.sort((a, b) => {
 				return b.fr - a.fr;
 			});
 			setTableData(tableData);
 		};
-		hyperliquid.addEventListener('metaAndAssetCtxs', () => {
-			recomputeTableData();
-		});
-		hyperliquid.init();
+		(async () => {
+			await hyperliquid.init();
+			await okx.init();
+			setInterval(recomputeTableData, 100);
+		})();
 		return async () => {
 			await hyperliquid.destroy();
+			await okx.destroy();
 		};
 	}, []);
 	return (
@@ -158,21 +323,17 @@ export default function Home() {
 					fontSize: '200%',
 					textAlign: 'center',
 				}}>Funding Rate Arbitrage Helper</h1>
-			<TableContainer>
-				<Table>
+			<TableContainer component={Paper}>
+				<Table aria-label="simple table">
 					<TableHead>
 						<TableRow>
-							<TableCell rowSpan="2">Exchange</TableCell>
-							<TableCell rowSpan="2">Coin</TableCell>
-							<TableCell colSpan="3">Funding Rate</TableCell>
-							<TableCell colSpan="3">Price</TableCell>
-						</TableRow>
-						<TableRow>
-							<TableCell align="right">APR</TableCell>
-							<TableCell align="right">8h</TableCell>
-							<TableCell align="right">1h</TableCell>
-							<TableCell>Mark</TableCell>
-							<TableCell>Index</TableCell>
+							<TableCell>Exchange</TableCell>
+							<TableCell>Coin</TableCell>
+							<TableCell align="right">FR (APR)</TableCell>
+							<TableCell align="right">FR (8h)</TableCell>
+							<TableCell align="right">FR (1h)</TableCell>
+							<TableCell>Mark Price</TableCell>
+							<TableCell>Index Price</TableCell>
 							<TableCell align="right">Diff (Mark - Index)</TableCell>
 						</TableRow>
 					</TableHead>
