@@ -4,9 +4,6 @@ import {
 	useState,
 	useEffect,
 } from 'react';
-import {
-	useInterval,
-} from 'react-use';
 
 import TableContainer from '@mui/material/TableContainer';
 import Table from '@mui/material/Table';
@@ -16,9 +13,9 @@ import TableRow from '@mui/material/TableRow';
 import TableCell from '@mui/material/TableCell';
 import Paper from '@mui/material/Paper';
 
-export function numberToHR(n: number, digits: number = 5) {
+function numberToHR(n: number, digits: number = 5) {
 	const pow = Math.floor(Math.log10(n)) + 1;
-	n = (n / Math.pow(10, pow)).toFixed(digits) * Math.pow(10, pow);
+	n = (+(n / Math.pow(10, pow)).toFixed(digits)) * Math.pow(10, pow);
 	const fractionDigits = Math.max(digits - pow, 0);
 	return n.toLocaleString(undefined, {
 		minimumFractionDigits: fractionDigits,
@@ -26,7 +23,7 @@ export function numberToHR(n: number, digits: number = 5) {
 	});
 }
 
-export interface HLDataMeta {
+interface HLDataMeta {
 	name: string;
 	szDecimals: number;
 	maxLeverage: number;
@@ -34,7 +31,7 @@ export interface HLDataMeta {
 	isDelisted?: boolean;
 }
 
-export interface HLDataAssetCtxs {
+interface HLDataAssetCtxs {
 	dayNtlVlm: string;
 	funding: string;
 	impactPxs: string[2];
@@ -46,14 +43,14 @@ export interface HLDataAssetCtxs {
 	prevDayPx: string;
 }
 
-export type HLDataMetaAndAssetCtxs = [
+type HLDataMetaAndAssetCtxs = [
 	{
 		universe: HLDataMeta[];
 	},
 	HLDataAssetCtxs[],
 ];
 
-export class Hyperliquid extends EventTarget {
+class Hyperliquid extends EventTarget {
 	
 	private _metaAndAssetCtxs: HLDataMetaAndAssetCtxs = [
 		{
@@ -61,7 +58,7 @@ export class Hyperliquid extends EventTarget {
 		},
 		[],
 	];
-	private _intervalId: number | null = null;
+	private _intervalId: ReturnType<typeof setInterval> | null = null;
 	
 	constructor(
 		public readonly restEndpoint: string = 'https://api.hyperliquid.xyz/info',
@@ -83,6 +80,7 @@ export class Hyperliquid extends EventTarget {
 		}
 	}
 	
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	public async fetch(body: any) {
 		const result = await (await fetch(this.restEndpoint, {
 			method: 'POST',
@@ -108,14 +106,18 @@ export class Hyperliquid extends EventTarget {
 	
 }
 
-export class Okx extends EventTarget {
+class Okx extends EventTarget {
 	
 	private _ws = new WebSocket(this.wsEndpoint);
 	private _initWsPromise: Promise<void>;
 	
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	private _instruments: any[] = [];
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	private _frs: { [instId: string]: any } = {};
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	private _markPrices: { [instId: string]: any } = {};
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	private _indexPrices: { [instId: string]: any } = {};
 	
 	constructor(
@@ -124,8 +126,8 @@ export class Okx extends EventTarget {
 	) {
 		super();
 		this._initWsPromise = new Promise<void>((resolve, reject) => {
-			this._ws.onopen = resolve;
-			this._ws.onerror = reject;
+			this._ws.onopen = () => resolve();
+			this._ws.onerror = () => reject();
 		});
 	}
 	
@@ -226,6 +228,7 @@ export class Okx extends EventTarget {
 		return this._indexPrices;
 	}
 	
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	public async fetch(path: string, query: any) {
 		const queryStr = new URLSearchParams(query).toString();
 		const url = `${this.restEndpoint}${path}` + (queryStr ? `?${queryStr}` : '');
@@ -241,6 +244,7 @@ export class Okx extends EventTarget {
 		return result.data;
 	}
 	
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	public subscribe(args: any[]) {
 		this._ws.send(JSON.stringify({
 			op: 'subscribe',
@@ -248,6 +252,7 @@ export class Okx extends EventTarget {
 		}));
 	}
 	
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	public unsubscribe(args: any[]) {
 		this._ws.send(JSON.stringify({
 			op: 'unsubscribe',
@@ -257,7 +262,7 @@ export class Okx extends EventTarget {
 	
 }
 
-export interface TableData {
+interface TableData {
 	exchange: string;
 	symbol: string;
 	fr: number;
@@ -266,12 +271,12 @@ export interface TableData {
 }
 
 export default function Home() {
-	const [tableData, setTableData] = useState([]);
+	const [tableData, setTableData] = useState<TableData[]>([]);
 	useEffect(() => {
 		const hyperliquid = new Hyperliquid();
 		const okx = new Okx();
 		const recomputeTableData = () => {
-			const tableData = [];
+			const tableData: TableData[] = [];
 			// Handle for Hyperliquid.
 			{
 				const [metas, assetCtxs] = hyperliquid.metaAndAssetCtxs;
@@ -290,12 +295,10 @@ export default function Home() {
 			// Handle for OKX.
 			{
 				for(const instId in okx.frs) {
-					const fr = okx.frs[instId];
-					const inst = okx.instruments.find((inst) => inst.instId === instId);
 					tableData.push({
 						exchange: 'OKX',
 						symbol: instId.split('-')[0],
-						fr: +fr.fundingRate * 3 * 365 * 100,
+						fr: +okx.frs[instId].fundingRate * 3 * 365 * 100,
 						markPrice: +okx.markPrices[instId].markPx,
 						indexPrice: +okx.indexPrices[instId.replace('-SWAP', '')].idxPx,
 					});
@@ -312,9 +315,9 @@ export default function Home() {
 			await okx.init();
 			setInterval(recomputeTableData, 100);
 		})();
-		return async () => {
-			await hyperliquid.destroy();
-			await okx.destroy();
+		return () => {
+			hyperliquid.destroy();
+			okx.destroy();
 		};
 	}, []);
 	return (
