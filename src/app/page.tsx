@@ -27,11 +27,61 @@ export function numberToHR(n: number, digits: number = 5) {
 	});
 }
 
-export class Hyperliquid {
+export interface HLDataMeta {
+	name: string;
+	szDecimals: number;
+	maxLeverage: number;
+	onlyIsolated?: boolean;
+	isDelisted?: boolean;
+}
+
+export interface HLDataAssetCtxs {
+	dayNtlVlm: string;
+	funding: string;
+	impactPxs: string[2];
+	markPx: string;
+	midPx: string;
+	openInterest: string;
+	oraclePx: string;
+	premium: string;
+	prevDayPx: string;
+}
+
+export type HLDataMetaAndAssetCtxs = [
+	{
+		universe: HLDataMeta[];
+	},
+	HLDataAssetCtxs[],
+];
+
+export class Hyperliquid extends EventTarget {
+	
+	private _metaAndAssetCtxs: HLDataMetaAndAssetCtxs = [
+		{
+			universe: [],
+		},
+		[],
+	];
+	private _intervalId: number | null = null;
 	
 	constructor(
 		public readonly restEndpoint: string = 'https://api.hyperliquid.xyz/info',
 	) {
+		super();
+	}
+	
+	public async init() {
+		await this.fetchMetaAndAssetCtxs();
+		this._intervalId = setInterval(async () => {
+			await this.fetchMetaAndAssetCtxs();
+		}, 5 * 1000);
+	}
+	
+	public async destroy() {
+		if(this._intervalId !== null) {
+			clearInterval(this._intervalId);
+			this._intervalId = null;
+		}
 	}
 	
 	public async fetch(body: any) {
@@ -43,6 +93,18 @@ export class Hyperliquid {
 			body: JSON.stringify(body),
 		})).json();
 		return result;
+	}
+	
+	public async fetchMetaAndAssetCtxs() {
+		this._metaAndAssetCtxs = await this.fetch({
+			type: 'metaAndAssetCtxs',
+		});
+		this.dispatchEvent(new Event('metaAndAssetCtxs'));
+		return this._metaAndAssetCtxs;
+	}
+	
+	public get metaAndAssetCtxs() {
+		return this._metaAndAssetCtxs;
 	}
 	
 }
@@ -58,27 +120,23 @@ export interface TableData {
 export default function Home() {
 	const [tableData, setTableData] = useState([]);
 	useEffect(() => {
-		const rawData = {
-			hyperliquid: [
-				{
-					universe: [],
-				},
-				[],
-			],
-		};
+		const hyperliquid = new Hyperliquid();
 		const recomputeTableData = () => {
 			const tableData = [];
 			// Handle for Hyperliquid.
-			for(let i=0; i<rawData.hyperliquid[0].universe.length; i++) {
-				const meta = rawData.hyperliquid[0].universe[i];
-				const assetCtxs = rawData.hyperliquid[1][i];
-				tableData.push({
-					exchange: 'Hyperliquid',
-					symbol: meta.name,
-					fr: +assetCtxs.funding * 24 * 365 * 100,
-					markPrice: +assetCtxs.markPx,
-					indexPrice: +assetCtxs.oraclePx,
-				});
+			{
+				const [metas, assetCtxs] = hyperliquid.metaAndAssetCtxs;
+				for(let i=0; i<metas.universe.length; i++) {
+					const meta = metas.universe[i];
+					const assetCtx = assetCtxs[i];
+					tableData.push({
+						exchange: 'Hyperliquid',
+						symbol: meta.name,
+						fr: +assetCtx.funding * 24 * 365 * 100,
+						markPrice: +assetCtx.markPx,
+						indexPrice: +assetCtx.oraclePx,
+					});
+				}
 			}
 			// Sort.
 			tableData.sort((a, b) => {
@@ -86,24 +144,12 @@ export default function Home() {
 			});
 			setTableData(tableData);
 		};
-		const hyperliquid = new Hyperliquid();
-		const updateHL = async () => {
-			rawData.hyperliquid = await hyperliquid.fetch({
-				type: 'metaAndAssetCtxs',
-			});
-		};
-		// Initial update.
-		(async () => {
-			await updateHL();
+		hyperliquid.addEventListener('metaAndAssetCtxs', () => {
 			recomputeTableData();
-		})();
-		// Periodic update.
-		const interval = setInterval(async () => {
-			await updateHL();
-			recomputeTableData();
-		}, 5 * 1000);
-		return () => {
-			clearInterval(interval);
+		});
+		hyperliquid.init();
+		return async () => {
+			await hyperliquid.destroy();
 		};
 	}, []);
 	return (
@@ -116,11 +162,17 @@ export default function Home() {
 				<Table>
 					<TableHead>
 						<TableRow>
-							<TableCell>Exchange</TableCell>
-							<TableCell>Coin</TableCell>
-							<TableCell align="right">Funding Rate (APR)</TableCell>
-							<TableCell>Mark Price</TableCell>
-							<TableCell>Index Price</TableCell>
+							<TableCell rowSpan="2">Exchange</TableCell>
+							<TableCell rowSpan="2">Coin</TableCell>
+							<TableCell colSpan="3">Funding Rate</TableCell>
+							<TableCell colSpan="3">Price</TableCell>
+						</TableRow>
+						<TableRow>
+							<TableCell align="right">APR</TableCell>
+							<TableCell align="right">8h</TableCell>
+							<TableCell align="right">1h</TableCell>
+							<TableCell>Mark</TableCell>
+							<TableCell>Index</TableCell>
 							<TableCell align="right">Diff (Mark - Index)</TableCell>
 						</TableRow>
 					</TableHead>
@@ -133,9 +185,20 @@ export default function Home() {
 									<TableCell>{row.exchange}</TableCell>
 									<TableCell>{row.symbol}</TableCell>
 									<TableCell align="right">{row.fr.toFixed(2)}%</TableCell>
-									<TableCell>${numberToHR(row.markPrice)}</TableCell>
+									<TableCell align="right">{(row.fr / 365 / 3).toFixed(4)}%</TableCell>
+									<TableCell align="right">{(row.fr / 365 / 24).toFixed(4)}%</TableCell>
+									<TableCell
+										style={{
+											color: row.markPrice > row.indexPrice ? 'green' : 'red',
+										}}
+									>${numberToHR(row.markPrice)}</TableCell>
 									<TableCell>${numberToHR(row.indexPrice)}</TableCell>
-									<TableCell align="right">{((row.markPrice - row.indexPrice) / (row.markPrice + row.indexPrice) * 2 * 100).toFixed(4)}%</TableCell>
+									<TableCell
+										align="right"
+										style={{
+											color: row.markPrice > row.indexPrice ? 'green' : 'red',
+										}}
+									>{((row.markPrice - row.indexPrice) / (row.markPrice + row.indexPrice) * 2 * 100).toFixed(4)}%</TableCell>
 								</TableRow>
 							);
 						})}
