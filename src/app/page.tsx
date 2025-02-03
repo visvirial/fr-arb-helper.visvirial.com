@@ -25,6 +25,8 @@ import { Bybit } from '@/lib/Bybit';
 
 export default function Home() {
 	const [tableData, setTableData] = useState<TableData[]>([]);
+	const [spotAvailability, setSpotAvailability] = useState<Map<string, Set<string>>>(new Map());
+	const [marginAvailability, setMarginAvailability] = useState<Map<string, Set<string>>>(new Map());
 	useEffect(() => {
 		const exchanges: IExchange[] = [
 			new Hyperliquid(),
@@ -40,6 +42,22 @@ export default function Home() {
 			tableData.sort((a, b) => {
 				return b.fr - a.fr;
 			});
+			// List all symbols.
+			const symbols = [...new Set(tableData.map((row) => row.symbol))];
+			// Set spot availability.
+			const spotAvailability = new Map<string, string[]>();
+			for(const symbol of symbols) {
+				const available = new Set(exchanges.filter((exchange) => exchange.isSpotAvailable(symbol)).map((exchange) => exchange.name));
+				spotAvailability.set(symbol, available);
+			}
+			setSpotAvailability(spotAvailability);
+			// Set margin availability.
+			const marginAvailability = new Map<string, string[]>();
+			for(const symbol of symbols) {
+				const available = new Set(exchanges.filter((exchange) => exchange.isMarginAvailable(symbol)).map((exchange) => exchange.name));
+				marginAvailability.set(symbol, available);
+			}
+			setMarginAvailability(marginAvailability);
 			setTableData(tableData);
 		};
 		(async () => {
@@ -62,12 +80,14 @@ export default function Home() {
 						<TableRow>
 							<TableCell>Exchange</TableCell>
 							<TableCell>Coin</TableCell>
-							<TableCell align="right">FR (APR)</TableCell>
-							<TableCell align="right">FR (8h)</TableCell>
-							<TableCell align="right">FR (1h)</TableCell>
-							<TableCell>Mark Price</TableCell>
-							<TableCell>Index Price</TableCell>
-							<TableCell align="right">Diff (Mark - Index)</TableCell>
+							<TableCell align="right">APR</TableCell>
+							<TableCell align="right">8h</TableCell>
+							<TableCell align="right">1h</TableCell>
+							<TableCell>Mark</TableCell>
+							<TableCell>Index</TableCell>
+							<TableCell align="right">Mark - Index</TableCell>
+							<TableCell>Spot</TableCell>
+							<TableCell>Margin</TableCell>
 						</TableRow>
 					</TableHead>
 					<TableBody>
@@ -92,7 +112,6 @@ export default function Home() {
 												marginRight: '5px',
 											}}
 										/>
-										{row.exchange}
 									</TableCell>
 									<TableCell>{row.symbol}</TableCell>
 									<TableCell align="right">{row.fr.toFixed(2)}%</TableCell>
@@ -110,6 +129,62 @@ export default function Home() {
 											color: row.markPrice > row.indexPrice ? 'green' : 'red',
 										}}
 									>{((row.markPrice - row.indexPrice) / (row.markPrice + row.indexPrice) * 2 * 100).toFixed(4)}%</TableCell>
+									<TableCell>
+										<div
+											style={{
+												display: 'flex',
+												alignItems: 'center',
+												flexWrap: 'wrap',
+											}}
+										>
+											{(() => {
+												if(spotAvailability.has(row.symbol)) {
+													return [...spotAvailability.get(row.symbol).values()].map((exchange) => {
+														return (
+															<Image
+																 key={`${exchange}`}
+																src={`/img/${exchange.toLowerCase()}.svg`}
+																width={20}
+																height={20}
+																alt={`${exchange} exchange logo`}
+																style={{
+																	marginRight: '5px',
+																}}
+															/>
+														);
+													});
+												}
+											})()}
+										</div>
+									</TableCell>
+									<TableCell>
+										<div
+											style={{
+												display: 'flex',
+												alignItems: 'center',
+												flexWrap: 'wrap',
+											}}
+										>
+											{(() => {
+												if(marginAvailability.has(row.symbol)) {
+													return [...marginAvailability.get(row.symbol).values()].map((exchange) => {
+														return (
+															<Image
+																 key={`${exchange}`}
+																src={`/img/${exchange.toLowerCase()}.svg`}
+																width={20}
+																height={20}
+																alt={`${exchange} exchange logo`}
+																style={{
+																	marginRight: '5px',
+																}}
+															/>
+														);
+													});
+												}
+											})()}
+										</div>
+									</TableCell>
 								</TableRow>
 							);
 						})}

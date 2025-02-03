@@ -4,14 +4,23 @@ import {
 } from '@/lib/util';
 import { IExchange } from '@/lib/IExchange';
 
+export type BybitCategory = 'spot' | 'linear' | 'inverse' | 'option';
+
 export class Bybit extends EventTarget implements IExchange {
+	
+	public readonly name: string = 'Bybit';
 	
 	//private _wsSpot = new WebSocket(this.wsSpotEndpoint);
 	private _wsLinear = new WebSocket(this.wsLinearEndpoint);
 	private _initWsPromises: Promise<void>[];
 	
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	private _instruments: any[] = [];
+	private _instruments: { [category in BybitCategory]: any[] } = {
+		spot: [],
+		linear: [],
+		inverse: [],
+		option: [],
+	};
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	private _tickers: { [symbol: string]: any } = {};
 	
@@ -31,25 +40,27 @@ export class Bybit extends EventTarget implements IExchange {
 	
 	public async init() {
 		// Fetch the instruments.
-		let nextPageCursor: string = '';
-		for(;;) {
-			const query: {
-				category: string;
-				limit: number;
-				cursor?: string;
-			} = {
-				category: 'linear',
-				limit: 1000,
-			};
-			if(nextPageCursor) {
-				query['cursor'] = nextPageCursor;
-			}
-			const result = await this.fetch('/v5/market/instruments-info', query);
-			this._instruments.push(...result.list);
-			if(result.nextPageCursor) {
-				nextPageCursor = result.nextPageCursor;
-			} else {
-				break;
+		for(const category of ['spot', 'linear', 'inverse', 'option']) {
+			let nextPageCursor: string = '';
+			for(;;) {
+				const query: {
+					category: string;
+					limit: number;
+					cursor?: string;
+				} = {
+					category,
+					limit: 1000,
+				};
+				if(nextPageCursor) {
+					query['cursor'] = nextPageCursor;
+				}
+				const result = await this.fetch('/v5/market/instruments-info', query);
+				this._instruments[category].push(...result.list);
+				if(result.nextPageCursor) {
+					nextPageCursor = result.nextPageCursor;
+				} else {
+					break;
+				}
 			}
 		}
 		//console.log(this._instruments);
@@ -80,7 +91,7 @@ export class Bybit extends EventTarget implements IExchange {
 					break;
 			}
 		};
-		this.subscribe(this._instruments.map((inst) => `tickers.${inst.symbol}`));
+		this.subscribe(this._instruments.linear.map((inst) => `tickers.${inst.symbol}`));
 	}
 	
 	public destroy() {
@@ -131,12 +142,20 @@ export class Bybit extends EventTarget implements IExchange {
 		}));
 	}
 	
+	public isSpotAvailable(symbol: string): boolean {
+		return this._instruments.spot.some((inst) => inst.symbol === `${symbol}USDT`);
+	}
+	
+	public isMarginAvailable(symbol: string): boolean {
+		return this._instruments.spot.some((inst) => inst.symbol === `${symbol}USDT` && inst.marginTrading !== 'none');
+	}
+	
 	public get tableData(): TableData[] {
 		const tableData: TableData[] = [];
 		for(const symbol in this.tickers) {
 			const ticker = this.tickers[symbol];
 			tableData.push({
-				exchange: 'Bybit',
+				exchange: this.name,
 				symbol: symbol.replace('USDT', ''),
 				fr: +ticker.fundingRate * 3 * 365 * 100,
 				markPrice: +ticker.markPrice,

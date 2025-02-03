@@ -8,6 +8,8 @@ export type OkxInstType = 'SPOT' | 'MARGIN' | 'SWAP' | 'FUTURES' | 'OPTION';
 
 export class Okx extends EventTarget implements IExchange {
 	
+	public readonly name: string = 'OKX';
+	
 	private _ws = new WebSocket(this.wsEndpoint);
 	private _initWsPromise: Promise<void>;
 	
@@ -198,11 +200,19 @@ export class Okx extends EventTarget implements IExchange {
 		}));
 	}
 	
+	public isSpotAvailable(symbol: string): boolean {
+		return this._instruments.SPOT.some((inst) => inst.baseCcy === symbol && inst.quoteCcy === 'USDT');
+	}
+	
+	public isMarginAvailable(symbol: string): boolean {
+		return this._instruments.MARGIN.some((inst) => inst.baseCcy === symbol && inst.quoteCcy === 'USDT');
+	}
+	
 	public get tableData(): TableData[] {
 		const tableData: TableData[] = [];
 		for(const instId in this.frs) {
 			tableData.push({
-				exchange: 'OKX',
+				exchange: this.name,
 				symbol: instId.split('-')[0],
 				fr: +this.frs[instId].fundingRate * 3 * 365 * 100,
 				markPrice: +this.markPrices[instId].markPx,

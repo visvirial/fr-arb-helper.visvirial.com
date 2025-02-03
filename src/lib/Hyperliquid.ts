@@ -33,6 +33,10 @@ export type HLDataMetaAndAssetCtxs = [
 
 export class Hyperliquid extends EventTarget implements IExchange {
 	
+	public readonly name: string = 'Hyperliquid';
+	
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	private _spotMeta: any;
 	private _metaAndAssetCtxs: HLDataMetaAndAssetCtxs = [
 		{
 			universe: [],
@@ -48,6 +52,9 @@ export class Hyperliquid extends EventTarget implements IExchange {
 	}
 	
 	public async init() {
+		this._spotMeta = await this.fetch({
+			type: 'spotMeta',
+		});
 		await this.fetchMetaAndAssetCtxs();
 		this._intervalId = setInterval(async () => {
 			await this.fetchMetaAndAssetCtxs();
@@ -85,6 +92,14 @@ export class Hyperliquid extends EventTarget implements IExchange {
 		return this._metaAndAssetCtxs;
 	}
 	
+	public isSpotAvailable(symbol: string): boolean {
+		return this._spotMeta.universe.some((meta) => meta.name === `${symbol}/USDC`);
+	}
+	
+	public isMarginAvailable(symbol: string): boolean {
+		return false;
+	}
+	
 	public get tableData(): TableData[] {
 		const tableData: TableData[] = [];
 		const [metas, assetCtxs] = this.metaAndAssetCtxs;
@@ -92,7 +107,7 @@ export class Hyperliquid extends EventTarget implements IExchange {
 			const meta = metas.universe[i];
 			const assetCtx = assetCtxs[i];
 			tableData.push({
-				exchange: 'Hyperliquid',
+				exchange: this.name,
 				symbol: meta.name,
 				fr: +assetCtx.funding * 24 * 365 * 100,
 				markPrice: +assetCtx.markPx,
