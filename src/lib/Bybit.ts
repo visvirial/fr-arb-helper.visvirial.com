@@ -33,7 +33,11 @@ export class Bybit extends EventTarget implements IExchange {
 		// Fetch the instruments.
 		let nextPageCursor: string = '';
 		for(;;) {
-			const query = {
+			const query: {
+				category: string;
+				limit: number;
+				cursor?: string;
+			} = {
 				category: 'linear',
 				limit: 1000,
 			};
