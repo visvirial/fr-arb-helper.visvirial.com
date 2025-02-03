@@ -5,6 +5,7 @@ import {
 	useEffect,
 } from 'react';
 
+import Image from 'next/image';
 import TableContainer from '@mui/material/TableContainer';
 import Table from '@mui/material/Table';
 import TableHead from '@mui/material/TableHead';
@@ -75,7 +76,24 @@ export default function Home() {
 								<TableRow
 									key={`${row.exchange}-${row.symbol}`}
 								>
-									<TableCell>{row.exchange}</TableCell>
+									<TableCell
+										style={{
+											display: 'flex',
+											alignItems: 'center',
+											flexWrap: 'wrap',
+										}}
+									>
+										<Image
+											src={`/img/${row.exchange.toLowerCase()}.svg`}
+											width={20}
+											height={20}
+											alt={`${row.exchange} exchange logo`}
+											style={{
+												marginRight: '5px',
+											}}
+										/>
+										{row.exchange}
+									</TableCell>
 									<TableCell>{row.symbol}</TableCell>
 									<TableCell align="right">{row.fr.toFixed(2)}%</TableCell>
 									<TableCell align="right">{(row.fr / 365 / 3).toFixed(4)}%</TableCell>

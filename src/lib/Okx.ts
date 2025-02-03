@@ -4,13 +4,21 @@ import {
 } from '@/lib/util';
 import { IExchange } from '@/lib/IExchange';
 
+export type OkxInstType = 'SPOT' | 'MARGIN' | 'SWAP' | 'FUTURES' | 'OPTION';
+
 export class Okx extends EventTarget implements IExchange {
 	
 	private _ws = new WebSocket(this.wsEndpoint);
 	private _initWsPromise: Promise<void>;
 	
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	private _instruments: any[] = [];
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	private _instruments: { [instType in OkxInstType]: any[] } = {
+		SPOT: [],
+		MARGIN: [],
+		SWAP: [],
+		FUTURES: [],
+		OPTION: [],
+	};
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	private _frs: { [instId: string]: any } = {};
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -31,9 +39,23 @@ export class Okx extends EventTarget implements IExchange {
 	
 	public async init() {
 		// Fetch the instruments.
-		this._instruments = await this.fetch('/api/v5/public/instruments', {
+		this._instruments.SPOT = await this.fetch('/api/v5/public/instruments', {
+			instType: 'SPOT',
+		});
+		this._instruments.MARGIN = await this.fetch('/api/v5/public/instruments', {
+			instType: 'MARGIN',
+		});
+		this._instruments.SWAP = await this.fetch('/api/v5/public/instruments', {
 			instType: 'SWAP',
 		});
+		this._instruments.FUTURES = await this.fetch('/api/v5/public/instruments', {
+			instType: 'FUTURES',
+		});
+		/*
+		this._instruments.OPTION = await this.fetch('/api/v5/public/instruments', {
+			instType: 'OPTION',
+		});
+		*/
 		// Fetch the mark prices.
 		const markPrices = await this.fetch('/api/v5/public/mark-price', {
 			instType: 'SWAP',
@@ -58,7 +80,7 @@ export class Okx extends EventTarget implements IExchange {
 			//console.log(data);
 			switch(data.arg.channel) {
 				case 'instruments':
-					this._instruments = data.data;
+					this._instruments[data.arg.instType as OkxInstType] = data.data;
 					break;
 				case 'funding-rate':
 					this._frs[data.arg.instId] = data.data[0];
@@ -78,11 +100,29 @@ export class Okx extends EventTarget implements IExchange {
 		this.subscribe([
 			{
 				channel: 'instruments',
+				instType: 'SPOT',
+			},
+			{
+				channel: 'instruments',
+				instType: 'MARGIN',
+			},
+			{
+				channel: 'instruments',
 				instType: 'SWAP',
 			},
+			{
+				channel: 'instruments',
+				instType: 'FUTURES',
+			},
+			/*
+			{
+				channel: 'instruments',
+				instType: 'OPTION',
+			},
+			*/
 		]);
 		// Get the USDT-SWAP instrument IDs.
-		const instIds = this._instruments.map((inst) => inst.instId).filter((instId) => instId.endsWith('-USDT-SWAP'));
+		const instIds = this._instruments.SWAP.map((inst) => inst.instId).filter((instId) => instId.endsWith('-USDT-SWAP'));
 		// Subscribe to the funding rates.
 		this.subscribe(
 			instIds.map((instId) => ({
