@@ -62,7 +62,7 @@ export default function Home() {
 		};
 		(async () => {
 			await Promise.all(exchanges.map((exchange) => exchange.init()));
-			setInterval(recomputeTableData, 100);
+			setInterval(recomputeTableData, 1000);
 		})();
 		return () => {
 			exchanges.forEach((exchange) => exchange.destroy());

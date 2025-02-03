@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import { AppRouterCacheProvider } from '@mui/material-nextjs/v15-appRouter';
 import Container from '@mui/material/Container';
+import Link from '@mui/material/Link';
 
 const geistSans = Geist({
 	variable: '--font-geist-sans',
@@ -32,6 +33,21 @@ export default function RootLayout({
 				<AppRouterCacheProvider>
 					<Container maxWidth="lg">
 						{children}
+						<hr
+							style={{
+								marginTop: '3em',
+								marginBottom: '1em',
+							}}
+						/>
+						<footer
+							style={{
+								marginBottom: '2em',
+							}}
+						>
+							<p>
+								Copyright &copy; <Link href="https://x.com/visvirial" target="_blank">@visvirial</Link>. All rights reserved.
+							</p>
+						</footer>
 					</Container>
 				</AppRouterCacheProvider>
 			</body>
