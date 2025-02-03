@@ -93,9 +93,11 @@ export class Hyperliquid extends EventTarget implements IExchange {
 	}
 	
 	public isSpotAvailable(symbol: string): boolean {
-		return this._spotMeta.universe.some((meta) => meta.name === `${symbol}/USDC`);
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		return this._spotMeta.universe.some((meta: any) => meta.name === `${symbol}/USDC`);
 	}
 	
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	public isMarginAvailable(symbol: string): boolean {
 		return false;
 	}

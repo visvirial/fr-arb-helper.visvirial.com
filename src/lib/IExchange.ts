@@ -8,7 +8,7 @@ export interface IExchange {
 	init(): Promise<void>;
 	destroy(): void;
 	tableData: TableData[];
-	isSpotAvailable: boolean;
-	isMarginAvailable: boolean;
+	isSpotAvailable(symbol: string): boolean;
+	isMarginAvailable(symbol: string): boolean;
 }
 

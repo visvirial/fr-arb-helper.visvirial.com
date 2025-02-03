@@ -45,14 +45,14 @@ export default function Home() {
 			// List all symbols.
 			const symbols = [...new Set(tableData.map((row) => row.symbol))];
 			// Set spot availability.
-			const spotAvailability = new Map<string, string[]>();
+			const spotAvailability = new Map<string, Set<string>>();
 			for(const symbol of symbols) {
 				const available = new Set(exchanges.filter((exchange) => exchange.isSpotAvailable(symbol)).map((exchange) => exchange.name));
 				spotAvailability.set(symbol, available);
 			}
 			setSpotAvailability(spotAvailability);
 			// Set margin availability.
-			const marginAvailability = new Map<string, string[]>();
+			const marginAvailability = new Map<string, Set<string>>();
 			for(const symbol of symbols) {
 				const available = new Set(exchanges.filter((exchange) => exchange.isMarginAvailable(symbol)).map((exchange) => exchange.name));
 				marginAvailability.set(symbol, available);
@@ -139,7 +139,7 @@ export default function Home() {
 										>
 											{(() => {
 												if(spotAvailability.has(row.symbol)) {
-													return [...spotAvailability.get(row.symbol).values()].map((exchange) => {
+													return [...spotAvailability.get(row.symbol)!.values()].map((exchange) => {
 														return (
 															<Image
 																 key={`${exchange}`}
@@ -167,7 +167,7 @@ export default function Home() {
 										>
 											{(() => {
 												if(marginAvailability.has(row.symbol)) {
-													return [...marginAvailability.get(row.symbol).values()].map((exchange) => {
+													return [...marginAvailability.get(row.symbol)!.values()].map((exchange) => {
 														return (
 															<Image
 																 key={`${exchange}`}

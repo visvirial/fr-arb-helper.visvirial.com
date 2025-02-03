@@ -55,7 +55,7 @@ export class Bybit extends EventTarget implements IExchange {
 					query['cursor'] = nextPageCursor;
 				}
 				const result = await this.fetch('/v5/market/instruments-info', query);
-				this._instruments[category].push(...result.list);
+				this._instruments[category as BybitCategory].push(...result.list);
 				if(result.nextPageCursor) {
 					nextPageCursor = result.nextPageCursor;
 				} else {
