@@ -78,6 +78,7 @@ export default function Home() {
 				<Table aria-label="simple table">
 					<TableHead>
 						<TableRow>
+							<TableCell>#</TableCell>
 							<TableCell>Exchange</TableCell>
 							<TableCell>Coin</TableCell>
 							<TableCell align="right">APR</TableCell>
@@ -91,11 +92,12 @@ export default function Home() {
 						</TableRow>
 					</TableHead>
 					<TableBody>
-						{tableData.map((row) => {
+						{[...tableData.entries()].map(([index, row]) => {
 							return (
 								<TableRow
 									key={`${row.exchange}-${row.symbol}`}
 								>
+									<TableCell>{(index+1).toLocaleString()}</TableCell>
 									<TableCell
 										style={{
 											display: 'flex',
