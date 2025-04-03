@@ -154,10 +154,11 @@ export class Bybit extends EventTarget implements IExchange {
 		const tableData: TableData[] = [];
 		for(const symbol in this.tickers) {
 			const ticker = this.tickers[symbol];
+			const instrument = this.instruments.linear.find((inst) => inst.symbol === symbol);
 			tableData.push({
 				exchange: this.name,
 				symbol: symbol.replace('USDT', ''),
-				fr: +ticker.fundingRate * 3 * 365 * 100,
+				fr: +ticker.fundingRate / instrument.fundingInterval * 60 * 24 * 365 * 100,
 				markPrice: +ticker.markPrice,
 				indexPrice: +ticker.indexPrice,
 			});
