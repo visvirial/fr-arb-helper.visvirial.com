@@ -91,7 +91,7 @@ export class Bybit extends EventTarget implements IExchange {
 					break;
 			}
 		};
-		this.subscribe(this._instruments.linear.map((inst) => `tickers.${inst.symbol}`));
+		this.subscribe(this._instruments.linear.filter((inst) => inst.symbol.endsWith('USDT')).map((inst) => `tickers.${inst.symbol}`));
 	}
 	
 	public destroy() {
