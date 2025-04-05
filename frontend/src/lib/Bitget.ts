@@ -11,6 +11,7 @@ export class Bitget extends EventTarget implements IExchange {
 	private _ws = new WebSocket(this.wsEndpoint);
 	private _initWsPromise: Promise<void>;
 	
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	private _currentFundRate: any;
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	private _spotSymbols: any[] = [];
