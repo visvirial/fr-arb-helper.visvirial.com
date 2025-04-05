@@ -11,6 +11,7 @@ export class Bitget extends EventTarget implements IExchange {
 	private _ws = new WebSocket(this.wsEndpoint);
 	private _initWsPromise: Promise<void>;
 	
+	private _currentFundRate: any;
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	private _spotSymbols: any[] = [];
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -41,6 +42,8 @@ export class Bitget extends EventTarget implements IExchange {
 	}
 	
 	public async init() {
+		// Get the current funding rate.
+		this._currentFundRate = await (await fetch('https://fr-arb-helper-bitget-cache.visvirial.com/current-fund-rate')).json();
 		// Get spot symbols.
 		this._spotSymbols = await this.fetch('/api/v2/spot/public/symbols');
 		// Get margin currencies.
@@ -109,10 +112,15 @@ export class Bitget extends EventTarget implements IExchange {
 			if(!ticker.symbol.endsWith('USDT')) {
 				continue;
 			}
+			const currentFundRate = this._currentFundRate[ticker.symbol];
+			if(!currentFundRate) {
+				continue;
+				//throw new Error(`Current funding rate not found for ${ticker.symbol}`);
+			}
 			tableData.push({
 				exchange: this.name,
 				symbol: ticker.symbol.slice(0, -4),
-				fr: +ticker.fundingRate * 3 * 365 * 100,
+				fr: +ticker.fundingRate / currentFundRate.fundingRateInterval * 24 * 365 * 100,
 				markPrice: +ticker.markPrice,
 				indexPrice: +ticker.indexPrice,
 			});
