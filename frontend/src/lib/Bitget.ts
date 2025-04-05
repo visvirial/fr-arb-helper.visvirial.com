@@ -4,8 +4,6 @@ import {
 } from '@/lib/util';
 import { IExchange } from '@/lib/IExchange';
 
-export type OkxInstType = 'SPOT' | 'MARGIN' | 'SWAP' | 'FUTURES' | 'OPTION';
-
 export class Bitget extends EventTarget implements IExchange {
 	
 	public readonly name: string = 'Bitget';
