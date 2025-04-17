@@ -63,7 +63,10 @@ export class BitgetCache {
 	}
 	
 	public get symbols() {
-		return this._tickers.filter((ticker) => ticker.lastPr !== '0').map((ticker) => ticker.symbol);
+		return this._tickers
+			.filter((ticker) => ticker.lastPr !== '0')
+			.filter((ticker) => !['AIDOGEUSDT'].includes(ticker.symbol))
+			.map((ticker) => ticker.symbol);
 	}
 	
 	public get currentFundRates() {
