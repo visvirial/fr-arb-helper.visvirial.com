@@ -38,11 +38,15 @@ export class BitgetCache {
 		const symbols = this.symbols;
 		for(const symbol of symbols) {
 			// Fetch the current fund rate.
-			const fr = await this.fetch('/api/v2/mix/market/current-fund-rate', {
-				symbol,
-				productType: 'USDT-FUTURES',
-			});
-			this._currentFundRates[symbol] = fr[0];
+			try {
+				const fr = await this.fetch('/api/v2/mix/market/current-fund-rate', {
+					symbol,
+					productType: 'USDT-FUTURES',
+				});
+				this._currentFundRates[symbol] = fr[0];
+			} catch(e) {
+				console.log(`[BitGetCache.refreshCaches()] Failed to fetch current fund rate for ${symbol}:`, e);
+			}
 			// Wait.
 			await setTimeout(60);
 		}
@@ -65,7 +69,6 @@ export class BitgetCache {
 	public get symbols() {
 		return this._tickers
 			.filter((ticker) => ticker.lastPr !== '0')
-			.filter((ticker) => !['AIDOGEUSDT'].includes(ticker.symbol))
 			.map((ticker) => ticker.symbol);
 	}
 	
