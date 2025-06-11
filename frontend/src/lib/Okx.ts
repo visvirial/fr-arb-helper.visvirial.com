@@ -211,10 +211,12 @@ export class Okx extends EventTarget implements IExchange {
 	public get tableData(): TableData[] {
 		const tableData: TableData[] = [];
 		for(const instId in this.frs) {
+			const fr = this.frs[instId];
+			const fundingInterval = fr.nextFundingTime - fr.fundingTime;
 			tableData.push({
 				exchange: this.name,
 				symbol: instId.split('-')[0],
-				fr: +this.frs[instId].fundingRate * 3 * 365 * 100,
+				fr: +fr.fundingRate / fundingInterval * 1000 * 60 * 60 * 24 * 365 * 100,
 				markPrice: +this.markPrices[instId].markPx,
 				indexPrice: +this.indexPrices[instId.replace('-SWAP', '')].idxPx,
 			});
