@@ -23,6 +23,7 @@ import { Hyperliquid } from '@/lib/Hyperliquid';
 import { Okx } from '@/lib/Okx';
 import { Bybit } from '@/lib/Bybit';
 import { Bitget } from '@/lib/Bitget';
+import { Binance } from '@/lib/Binance';
 
 export default function Home() {
 	const [tableData, setTableData] = useState<TableData[]>([]);
@@ -34,6 +35,7 @@ export default function Home() {
 			new Okx(),
 			new Bybit(),
 			new Bitget(),
+			new Binance(),
 		];
 		const recomputeTableData = () => {
 			const tableData: TableData[] = [];
