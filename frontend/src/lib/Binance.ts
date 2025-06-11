@@ -30,6 +30,7 @@ export class Binance extends EventTarget implements IExchange {
 	private _derivativesWs = new WebSocket(this.derivativesWsEndpoint);
 	private _initDerivativesWsPromise: Promise<void>;
 	
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	private _spotExchangeInfo: any = null;
 	private _fundingInfo: BinanceFundingInfo[] = [];
 	private _markPriceStream: BinanceMarkPriceStream[] = [];
@@ -85,10 +86,12 @@ export class Binance extends EventTarget implements IExchange {
 	}
 	
 	public isSpotAvailable(symbol: string): boolean {
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		return this._spotExchangeInfo.symbols.some((s: any) => s.symbol === symbol + 'USDT' && s.status === 'TRADING' && s.permissionSets[0].includes('SPOT'));
 	}
 	
 	public isMarginAvailable(symbol: string): boolean {
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		return this._spotExchangeInfo.symbols.some((s: any) => s.symbol === symbol + 'USDT' && s.status === 'TRADING' && s.permissionSets[0].includes('MARGIN'));
 	}
 	
