@@ -17,7 +17,7 @@ export const main = async () => {
 	app.get('/ping', async (c) => {
 		return c.json({ pong: Date.now() });
 	});
-	app.get('/current-fund-rate', async (c) => {
+	app.get('/bitget/current-fund-rate', async (c) => {
 		return c.json(bitgetCache.currentFundRates);
 	});
 	serve(app);

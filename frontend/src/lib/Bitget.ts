@@ -44,7 +44,7 @@ export class Bitget extends EventTarget implements IExchange {
 	
 	public async init() {
 		// Get the current funding rate.
-		this._currentFundRate = await (await fetch('https://fr-arb-helper-bitget-cache.visvirial.com/current-fund-rate')).json();
+		this._currentFundRate = await (await fetch('https://fr-arb-helper-backend.visvirial.com/bitget/current-fund-rate')).json();
 		// Get spot symbols.
 		this._spotSymbols = await this.fetch('/api/v2/spot/public/symbols');
 		// Get margin currencies.
