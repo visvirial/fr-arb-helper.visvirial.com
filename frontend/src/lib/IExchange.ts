@@ -11,4 +11,3 @@ export interface IExchange {
 	isSpotAvailable(symbol: string): boolean;
 	isMarginAvailable(symbol: string): boolean;
 }
-

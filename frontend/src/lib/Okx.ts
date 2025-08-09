@@ -27,6 +27,12 @@ export class Okx extends EventTarget implements IExchange {
 	private _markPrices: { [instId: string]: any } = {};
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	private _indexPrices: { [instId: string]: any } = {};
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	private _openInterest: { [instType: string]: any } = {
+		SWAP: null,
+		FUTURES: null,
+		OPTION: null,
+	};
 	
 	constructor(
 		public readonly restEndpoint: string = 'https://www.okx.com',
@@ -72,6 +78,10 @@ export class Okx extends EventTarget implements IExchange {
 		for(const indexPrice of indexPrices) {
 			this._indexPrices[indexPrice.instId] = indexPrice;
 		}
+		// Fetch open interest.
+		this._openInterest.SWAP = await this.fetch('/api/v5/public/open-interest', {
+			instType: 'SWAP',
+		});
 		// Wait for the WebSocket to open.
 		await this._initWsPromise;
 		this._ws.onmessage = (event) => {
@@ -219,6 +229,7 @@ export class Okx extends EventTarget implements IExchange {
 				fr: +fr.fundingRate / fundingInterval * 1000 * 60 * 60 * 24 * 365 * 100,
 				markPrice: +this.markPrices[instId].markPx,
 				indexPrice: +this.indexPrices[instId.replace('-SWAP', '')].idxPx,
+				oi: +this._openInterest.SWAP.find((item: any) => item.instId === instId)?.oiUsd,
 			});
 		}
 		return tableData;

@@ -124,6 +124,7 @@ export class Bitget extends EventTarget implements IExchange {
 				fr: +ticker.fundingRate / currentFundRate.fundingRateInterval * 24 * 365 * 100,
 				markPrice: +ticker.markPrice,
 				indexPrice: +ticker.indexPrice,
+				oi: +ticker.holdingAmount * +ticker.markPrice,
 			});
 		}
 		return tableData;

@@ -1,5 +1,6 @@
 
 export function numberToHR(n: number, digits: number = 5) {
+	if(n === 0) return '0';
 	const pow = Math.floor(Math.log10(n)) + 1;
 	n = (+(n / Math.pow(10, pow)).toFixed(digits)) * Math.pow(10, pow);
 	const fractionDigits = Math.max(digits - pow, 0);
@@ -15,5 +16,5 @@ export interface TableData {
 	fr: number;
 	markPrice: number;
 	indexPrice: number;
+	oi: number;
 }
-

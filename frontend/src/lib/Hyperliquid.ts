@@ -114,6 +114,7 @@ export class Hyperliquid extends EventTarget implements IExchange {
 				fr: +assetCtx.funding * 24 * 365 * 100,
 				markPrice: +assetCtx.markPx,
 				indexPrice: +assetCtx.oraclePx,
+				oi: +assetCtx.openInterest * +assetCtx.markPx,
 			});
 		}
 		return tableData;

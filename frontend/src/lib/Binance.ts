@@ -106,6 +106,7 @@ export class Binance extends EventTarget implements IExchange {
 				fr: +markPrice.r / fundingIntervalHours * 24 * 365 * 100,
 				markPrice: +markPrice.p,
 				indexPrice: +markPrice.i,
+				oi: 0,
 			});
 		}
 		return tableData;

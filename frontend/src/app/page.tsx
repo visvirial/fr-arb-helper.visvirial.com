@@ -91,6 +91,7 @@ export default function Home() {
 							<TableCell>Mark</TableCell>
 							<TableCell>Index</TableCell>
 							<TableCell align="right">Mark - Index</TableCell>
+							<TableCell>OI</TableCell>
 							<TableCell>Spot</TableCell>
 							<TableCell>Margin</TableCell>
 						</TableRow>
@@ -135,6 +136,7 @@ export default function Home() {
 											color: row.markPrice > row.indexPrice ? 'green' : 'red',
 										}}
 									>{((row.markPrice - row.indexPrice) / (row.markPrice + row.indexPrice) * 2 * 100).toFixed(4)}%</TableCell>
+									<TableCell>${numberToHR(row.oi)}</TableCell>
 									<TableCell>
 										<div
 											style={{
