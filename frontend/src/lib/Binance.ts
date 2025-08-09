@@ -34,6 +34,7 @@ export class Binance extends EventTarget implements IExchange {
 	private _spotExchangeInfo: any = null;
 	private _fundingInfo: BinanceFundingInfo[] = [];
 	private _markPriceStream: BinanceMarkPriceStream[] = [];
+	private _openInterest: { [symbol: string]: number } = {};
 	
 	constructor(
 		public readonly spotRestEndpoint: string = 'https://api.binance.com',
@@ -52,6 +53,8 @@ export class Binance extends EventTarget implements IExchange {
 		this._spotExchangeInfo = await (await fetch(this.spotRestEndpoint + '/api/v3/exchangeInfo')).json();
 		// Fetch fundingInfo.
 		this._fundingInfo = await (await fetch(this.derivativesRestEndpoint + '/fapi/v1/fundingInfo')).json();
+		// Fetch open interest.
+		this._openInterest = await (await fetch('https://fr-arb-helper-backend.visvirial.com/binance/openInterest')).json();
 		// Wait for the WebSocket to open.
 		await this._initDerivativesWsPromise;
 		this._derivativesWs.onmessage = (event) => {
@@ -106,7 +109,7 @@ export class Binance extends EventTarget implements IExchange {
 				fr: +markPrice.r / fundingIntervalHours * 24 * 365 * 100,
 				markPrice: +markPrice.p,
 				indexPrice: +markPrice.i,
-				oi: 0,
+				oi: (this._openInterest[markPrice.s] || 0) * +markPrice.p,
 			});
 		}
 		return tableData;
