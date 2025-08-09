@@ -229,6 +229,7 @@ export class Okx extends EventTarget implements IExchange {
 				fr: +fr.fundingRate / fundingInterval * 1000 * 60 * 60 * 24 * 365 * 100,
 				markPrice: +this.markPrices[instId].markPx,
 				indexPrice: +this.indexPrices[instId.replace('-SWAP', '')].idxPx,
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				oi: +this._openInterest.SWAP.find((item: any) => item.instId === instId)?.oiUsd,
 			});
 		}
