@@ -77,6 +77,7 @@ export class Aster extends EventTarget implements IExchange {
 		return interval!.fundingInterval;
 	}
 	
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	public isSpotAvailable(symbol: string): boolean {
 		return false;
 	}
