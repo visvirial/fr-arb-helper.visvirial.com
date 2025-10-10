@@ -223,6 +223,9 @@ export class Okx extends EventTarget implements IExchange {
 		for(const instId in this.frs) {
 			const fr = this.frs[instId];
 			const fundingInterval = fr.nextFundingTime - fr.fundingTime;
+			if(this.indexPrices[instId.replace('-SWAP', '')] === undefined) {
+				continue;
+			}
 			tableData.push({
 				exchange: this.name,
 				symbol: instId.split('-')[0],

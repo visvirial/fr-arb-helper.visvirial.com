@@ -24,6 +24,7 @@ import { Okx } from '@/lib/Okx';
 import { Bybit } from '@/lib/Bybit';
 import { Bitget } from '@/lib/Bitget';
 import { Binance } from '@/lib/Binance';
+import { Aster } from '@/lib/Aster';
 
 export default function Home() {
 	const [tableData, setTableData] = useState<TableData[]>([]);
@@ -36,6 +37,7 @@ export default function Home() {
 			new Bybit(),
 			new Bitget(),
 			new Binance(),
+			new Aster(),
 		];
 		const recomputeTableData = () => {
 			const tableData: TableData[] = [];
@@ -136,7 +138,7 @@ export default function Home() {
 											color: row.markPrice > row.indexPrice ? 'green' : 'red',
 										}}
 									>{((row.markPrice - row.indexPrice) / (row.markPrice + row.indexPrice) * 2 * 100).toFixed(4)}%</TableCell>
-									<TableCell>${numberToHR(row.oi)}</TableCell>
+									<TableCell>{row.oi === 0 ? 'N/A' : '$' + numberToHR(row.oi)}</TableCell>
 									<TableCell>
 										<div
 											style={{

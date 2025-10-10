@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="32"
+   height="32"
+   viewBox="0 0 32 32"
+   fill="none"
+   version="1.1"
+   id="svg34"
+   sodipodi:docname="aster.svg"
+   inkscape:version="1.2.2 (b0a8486541, 2022-12-01)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview36"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="true"
+     inkscape:deskcolor="#d1d1d1"
+     showgrid="false"
+     inkscape:zoom="14.950413"
+     inkscape:cx="60.533444"
+     inkscape:cy="16.053068"
+     inkscape:window-width="2494"
+     inkscape:window-height="1369"
+     inkscape:window-x="66"
+     inkscape:window-y="32"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg34" />
+  <path
+     d="M 9.13309,30.4398 9.88315,26.9871 C 10.7197,23.1362 7.77521,19.4988 3.82118,19.4988 H 0.385363 C 1.4689,24.3374 4.75127,28.3496 9.13309,30.4398 Z"
+     fill="url(#paint0_linear_428_3535)"
+     id="path2"
+     style="fill:url(#paint0_linear_428_3535)" />
+  <path
+     d="M 10.64,31.0663 C 12.3326,31.6707 14.1567,32 16.0579,32 23.7199,32 30.1285,26.6527 31.7305,19.4988 H 21.249 c -4.7246,0 -8.8094,3.2836 -9.809,7.885 z"
+     fill="url(#paint1_linear_428_3535)"
+     id="path4"
+     style="fill:url(#paint1_linear_428_3535)" />
+  <path
+     d="m 32.0038,17.8987 c 0.074,-0.6231 0.1121,-1.2572 0.1121,-1.9002 0,-8.39448 -6.4869,-15.279213 -14.738,-15.9481749 L 15.1273,10.4105 c -0.8366,3.8509 2.1079,7.4882 6.0619,7.4882 z"
+     fill="url(#paint2_linear_428_3535)"
+     id="path6"
+     style="fill:url(#paint2_linear_428_3535)" />
+  <path
+     d="M 15.7459,0 C 7.02134,0.165717 0,7.26504 0,15.9985 c 0,0.643 0.0380539,1.2771 0.112041,1.9002 H 3.76146 c 4.72457,0 8.80944,-3.2836 9.80904,-7.885 z"
+     fill="url(#paint3_linear_428_3535)"
+     id="path8"
+     style="fill:url(#paint3_linear_428_3535)" />
+  <defs
+     id="defs32">
+    <linearGradient
+       id="paint0_linear_428_3535"
+       x1="18.941601"
+       y1="4.14314e-07"
+       x2="12.6408"
+       y2="32.050701"
+       gradientUnits="userSpaceOnUse">
+      <stop
+         stop-color="#F4D5B1"
+         id="stop12" />
+      <stop
+         offset="1"
+         stop-color="#FFD29F"
+         id="stop14" />
+    </linearGradient>
+    <linearGradient
+       id="paint1_linear_428_3535"
+       x1="18.941601"
+       y1="4.14314e-07"
+       x2="12.6408"
+       y2="32.050701"
+       gradientUnits="userSpaceOnUse">
+      <stop
+         stop-color="#F4D5B1"
+         id="stop17" />
+      <stop
+         offset="1"
+         stop-color="#FFD29F"
+         id="stop19" />
+    </linearGradient>
+    <linearGradient
+       id="paint2_linear_428_3535"
+       x1="18.941601"
+       y1="4.14314e-07"
+       x2="12.6408"
+       y2="32.050701"
+       gradientUnits="userSpaceOnUse">
+      <stop
+         stop-color="#F4D5B1"
+         id="stop22" />
+      <stop
+         offset="1"
+         stop-color="#FFD29F"
+         id="stop24" />
+    </linearGradient>
+    <linearGradient
+       id="paint3_linear_428_3535"
+       x1="18.941601"
+       y1="4.14314e-07"
+       x2="12.6408"
+       y2="32.050701"
+       gradientUnits="userSpaceOnUse">
+      <stop
+         stop-color="#F4D5B1"
+         id="stop27" />
+      <stop
+         offset="1"
+         stop-color="#FFD29F"
+         id="stop29" />
+    </linearGradient>
+  </defs>
+</svg>
