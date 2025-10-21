@@ -13,14 +13,16 @@ export const main = async () => {
 	const asterCache = new AsterCache();
 	const startInit = Date.now();
 	console.log('Initializing...');
-	await Promise.all([
-		bitgetCache.init(),
-		binanceCache.init(),
-		asterCache.init(),
-	]);
-	await bitgetCache.run();
-	await binanceCache.run();
-	await asterCache.run();
+	(async () => {
+		await Promise.all([
+			bitgetCache.init(),
+			binanceCache.init(),
+			asterCache.init(),
+		]);
+		await bitgetCache.run();
+		await binanceCache.run();
+		await asterCache.run();
+	})();
 	// Initialize Hono server.
 	const app = new Hono();
 	app.use('*', cors());
