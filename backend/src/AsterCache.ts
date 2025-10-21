@@ -65,6 +65,9 @@ export class AsterCache {
 		const result = [];
 		for(const symbol in this._fundingRate) {
 			const fr = this._fundingRate[symbol];
+			if(fr.length < 2) {
+				continue;
+			}
 			fr.sort((a, b) => b.fundingTime - a.fundingTime);
 			result.push({
 				symbol,
