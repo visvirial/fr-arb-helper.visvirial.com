@@ -71,7 +71,7 @@ export class Aster extends EventTarget implements IExchange {
 	
 	public getFundingInterval(symbol: string): number {
 		const interval = this._fundingRateInterval.find((f) => f.symbol === symbol);
-		if(interval === undefined) {
+		if(!interval) {
 			console.log(symbol, this._fundingRateInterval);
 		}
 		return interval!.fundingInterval;
