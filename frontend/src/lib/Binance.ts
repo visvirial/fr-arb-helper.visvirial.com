@@ -60,7 +60,14 @@ export class Binance extends EventTarget implements IExchange {
 		this._derivativesWs.onmessage = (event) => {
 			const data = JSON.parse(event.data);
 			if(data.id !== undefined) return;
-			this._markPriceStream = data;
+			for(const item of data) {
+				const index = this._markPriceStream.findIndex(mp => mp.s === item.s);
+				if(index !== -1) {
+					this._markPriceStream[index] = item;
+				} else {
+					this._markPriceStream.push(item);
+				}
+			}
 		};
 		// Subscribe to the mark price stream.
 		this.subscribe(
