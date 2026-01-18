@@ -53,6 +53,7 @@ export default function Home() {
 	const [tableData, setTableData] = useState<TableData[]>([]);
 	const [spotAvailability, setSpotAvailability] = useState<Map<string, Set<string>>>(new Map());
 	const [marginAvailability, setMarginAvailability] = useState<Map<string, Set<string>>>(new Map());
+	const [lastRefreshed, setLastRefreshed] = useState<number>(0);
 	
 	// Load selected exchanges from localStorage or default to all selected
 	const [selectedExchanges, setSelectedExchanges] = useState<Set<string>>(() => {
@@ -113,7 +114,11 @@ export default function Home() {
 		});
 	};
 	
-	// Initialize selected exchanges and setup interval
+	useEffect(() => {
+		const id = setInterval(() => setLastRefreshed(Date.now()), 1000);
+		return () => clearInterval(id);
+	}, []);
+	
 	useEffect(() => {
 		const exchanges: IExchange[] = allExchangeInstances
 			.filter(e => selectedExchanges.has(e.name));
@@ -126,45 +131,32 @@ export default function Home() {
 			return;
 		}
 		
-		let intervalId: ReturnType<typeof setInterval> | null = null;
-		
-		const recomputeTableData = () => {
-			const tableData: TableData[] = [];
-			exchanges.forEach((exchange) => {
-				tableData.push(...exchange.tableData);
-			});
-			// Sort.
-			tableData.sort((a, b) => {
-				return b.fr - a.fr;
-			});
-			// List all symbols.
-			const symbols = [...new Set(tableData.map((row) => row.symbol))];
-			// Set spot availability for ALL exchanges, not just selected ones.
-			const spotAvailability = new Map<string, Set<string>>();
-			for(const symbol of symbols) {
-				const available = new Set(allExchangeInstances.filter((exchange) => exchange.isSpotAvailable(symbol)).map((exchange) => exchange.name));
-				spotAvailability.set(symbol, available);
-			}
-			setSpotAvailability(spotAvailability);
-			// Set margin availability for ALL exchanges, not just selected ones.
-			const marginAvailability = new Map<string, Set<string>>();
-			for(const symbol of symbols) {
-				const available = new Set(allExchangeInstances.filter((exchange) => exchange.isMarginAvailable(symbol)).map((exchange) => exchange.name));
-				marginAvailability.set(symbol, available);
-			}
-			setMarginAvailability(marginAvailability);
-			setTableData(tableData);
-		};
-		(async () => {
-			await Promise.all(exchanges.map((exchange) => exchange.init()));
-			intervalId = setInterval(recomputeTableData, 1000);
-		})();
-		return () => {
-			if (intervalId !== null) {
-				clearInterval(intervalId);
-			}
-		};
-	}, [selectedExchanges, allExchangeInstances]);
+		const tableData: TableData[] = [];
+		exchanges.forEach((exchange) => {
+			tableData.push(...exchange.tableData);
+		});
+		// Sort.
+		tableData.sort((a, b) => {
+			return b.fr - a.fr;
+		});
+		// List all symbols.
+		const symbols = [...new Set(tableData.map((row) => row.symbol))];
+		// Set spot availability for ALL exchanges, not just selected ones.
+		const spotAvailability = new Map<string, Set<string>>();
+		for(const symbol of symbols) {
+			const available = new Set(allExchangeInstances.filter((exchange) => exchange.isSpotAvailable(symbol)).map((exchange) => exchange.name));
+			spotAvailability.set(symbol, available);
+		}
+		setSpotAvailability(spotAvailability);
+		// Set margin availability for ALL exchanges, not just selected ones.
+		const marginAvailability = new Map<string, Set<string>>();
+		for(const symbol of symbols) {
+			const available = new Set(allExchangeInstances.filter((exchange) => exchange.isMarginAvailable(symbol)).map((exchange) => exchange.name));
+			marginAvailability.set(symbol, available);
+		}
+		setMarginAvailability(marginAvailability);
+		setTableData(tableData);
+	}, [lastRefreshed, selectedExchanges, allExchangeInstances]);
 	
 	// Cleanup all exchanges on unmount
 	useEffect(() => {
@@ -173,6 +165,7 @@ export default function Home() {
 		};
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
+	
 	return (
 		<div>
 			<h1 style={{
