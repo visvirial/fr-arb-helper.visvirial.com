@@ -94,12 +94,20 @@ export default function Home() {
 		});
 	};
 	
+	// Track which exchanges are currently being used
+	const [activeExchanges, setActiveExchanges] = useState<IExchange[]>([]);
+	
+	// Update active exchanges when selection changes
 	useEffect(() => {
 		const exchanges: IExchange[] = allExchangeInstances
 			.filter(e => selectedExchanges.has(e.name));
-		
+		setActiveExchanges(exchanges);
+	}, [selectedExchanges, allExchangeInstances]);
+	
+	// Initialize selected exchanges and setup interval
+	useEffect(() => {
 		// Don't proceed if no exchanges are selected
-		if (exchanges.length === 0) {
+		if (activeExchanges.length === 0) {
 			setTableData([]);
 			setSpotAvailability(new Map());
 			setMarginAvailability(new Map());
@@ -110,7 +118,7 @@ export default function Home() {
 		
 		const recomputeTableData = () => {
 			const tableData: TableData[] = [];
-			exchanges.forEach((exchange) => {
+			activeExchanges.forEach((exchange) => {
 				tableData.push(...exchange.tableData);
 			});
 			// Sort.
@@ -136,7 +144,7 @@ export default function Home() {
 			setTableData(tableData);
 		};
 		(async () => {
-			await Promise.all(exchanges.map((exchange) => exchange.init()));
+			await Promise.all(activeExchanges.map((exchange) => exchange.init()));
 			intervalId = setInterval(recomputeTableData, 1000);
 		})();
 		return () => {
@@ -144,7 +152,7 @@ export default function Home() {
 				clearInterval(intervalId);
 			}
 		};
-	}, [selectedExchanges, allExchangeInstances]);
+	}, [activeExchanges, allExchangeInstances]);
 	
 	// Cleanup all exchanges on unmount
 	useEffect(() => {
@@ -161,7 +169,6 @@ export default function Home() {
 				}}>Funding Rate Arbitrage Helper</h1>
 			
 			<Box sx={{ mb: 3, p: 2, bgcolor: 'background.paper', borderRadius: 1, textAlign: 'center' }}>
-				<h2 style={{ fontSize: '120%', marginBottom: '10px' }}>Select Exchanges</h2>
 				<FormGroup row sx={{ justifyContent: 'center' }}>
 					{allExchanges.map(exchange => (
 						<FormControlLabel
