@@ -13,6 +13,10 @@ import TableBody from '@mui/material/TableBody';
 import TableRow from '@mui/material/TableRow';
 import TableCell from '@mui/material/TableCell';
 import Paper from '@mui/material/Paper';
+import FormGroup from '@mui/material/FormGroup';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import Checkbox from '@mui/material/Checkbox';
+import Box from '@mui/material/Box';
 
 import {
 	numberToHR,
@@ -27,59 +31,175 @@ import { Binance } from '@/lib/Binance';
 import { Aster } from '@/lib/Aster';
 
 export default function Home() {
+	const [allExchangeInstances, setAllExchangeInstances] = useState<IExchange[]>([]);
+	const [allExchanges, setAllExchanges] = useState< { name: string; instance: IExchange }[]>([]);
+	useEffect(() => {
+		(async () => {
+			// Define all available exchanges
+			const allExchanges = [
+				{ name: 'Hyperliquid', instance: new Hyperliquid() },
+				{ name: 'OKX'        , instance: new Okx() },
+				{ name: 'Bybit'      , instance: new Bybit() },
+				{ name: 'Bitget'     , instance: new Bitget() },
+				{ name: 'Binance'    , instance: new Binance() },
+				{ name: 'Aster'      , instance: new Aster() },
+			];
+			await Promise.all(allExchanges.map((exchange) => exchange.instance.init()));
+			setAllExchanges(allExchanges);
+			setAllExchangeInstances(allExchanges.map(e => e.instance));
+		})();
+	}, []);
+	
 	const [tableData, setTableData] = useState<TableData[]>([]);
 	const [spotAvailability, setSpotAvailability] = useState<Map<string, Set<string>>>(new Map());
 	const [marginAvailability, setMarginAvailability] = useState<Map<string, Set<string>>>(new Map());
+	const [lastRefreshed, setLastRefreshed] = useState<number>(0);
+	
+	// Load selected exchanges from localStorage or default to all selected
+	const [selectedExchanges, setSelectedExchanges] = useState<Set<string>>(() => {
+		// During SSR, return empty set to avoid hydration mismatch
+		if (typeof window === 'undefined') {
+			return new Set<string>();
+		}
+		try {
+			const saved = localStorage.getItem('selectedExchanges');
+			if (saved) {
+				return new Set(JSON.parse(saved));
+			}
+		} catch (error) {
+			console.error('Failed to load selected exchanges from localStorage:', error);
+		}
+		return new Set(allExchanges.map(e => e.name));
+	});
+	
+	// Initialize from localStorage on mount (client-side only)
+	const [isClient, setIsClient] = useState(false);
+	
 	useEffect(() => {
-		const exchanges: IExchange[] = [
-			new Hyperliquid(),
-			new Okx(),
-			new Bybit(),
-			new Bitget(),
-			new Binance(),
-			new Aster(),
-		];
-		const recomputeTableData = () => {
-			const tableData: TableData[] = [];
-			exchanges.forEach((exchange) => {
-				tableData.push(...exchange.tableData);
-			});
-			// Sort.
-			tableData.sort((a, b) => {
-				return b.fr - a.fr;
-			});
-			// List all symbols.
-			const symbols = [...new Set(tableData.map((row) => row.symbol))];
-			// Set spot availability.
-			const spotAvailability = new Map<string, Set<string>>();
-			for(const symbol of symbols) {
-				const available = new Set(exchanges.filter((exchange) => exchange.isSpotAvailable(symbol)).map((exchange) => exchange.name));
-				spotAvailability.set(symbol, available);
+		setIsClient(true);
+		// If selectedExchanges is empty (from SSR), load from localStorage or set all
+		if (selectedExchanges.size === 0) {
+			try {
+				const saved = localStorage.getItem('selectedExchanges');
+				if (saved) {
+					setSelectedExchanges(new Set(JSON.parse(saved)));
+				} else {
+					setSelectedExchanges(new Set(allExchanges.map(e => e.name)));
+				}
+			} catch (error) {
+				console.error('Failed to load selected exchanges from localStorage:', error);
+				setSelectedExchanges(new Set(allExchanges.map(e => e.name)));
 			}
-			setSpotAvailability(spotAvailability);
-			// Set margin availability.
-			const marginAvailability = new Map<string, Set<string>>();
-			for(const symbol of symbols) {
-				const available = new Set(exchanges.filter((exchange) => exchange.isMarginAvailable(symbol)).map((exchange) => exchange.name));
-				marginAvailability.set(symbol, available);
-			}
-			setMarginAvailability(marginAvailability);
-			setTableData(tableData);
-		};
-		(async () => {
-			await Promise.all(exchanges.map((exchange) => exchange.init()));
-			setInterval(recomputeTableData, 1000);
-		})();
-		return () => {
-			exchanges.forEach((exchange) => exchange.destroy());
-		};
+		}
+		// Intentionally omit selectedExchanges and allExchanges from deps - this should only run once on mount
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
+	
+	// Save to localStorage whenever selection changes (client-side only)
+	useEffect(() => {
+		if (isClient) {
+			localStorage.setItem('selectedExchanges', JSON.stringify([...selectedExchanges]));
+		}
+	}, [selectedExchanges, isClient]);
+	
+	const handleExchangeToggle = (exchangeName: string) => {
+		setSelectedExchanges(prev => {
+			const newSet = new Set(prev);
+			if (newSet.has(exchangeName)) {
+				newSet.delete(exchangeName);
+			} else {
+				newSet.add(exchangeName);
+			}
+			return newSet;
+		});
+	};
+	
+	useEffect(() => {
+		const id = setInterval(() => setLastRefreshed(Date.now()), 1000);
+		return () => clearInterval(id);
+	}, []);
+	
+	useEffect(() => {
+		const exchanges: IExchange[] = allExchangeInstances
+			.filter(e => selectedExchanges.has(e.name));
+		
+		// Don't proceed if no exchanges are selected
+		if (exchanges.length === 0) {
+			setTableData([]);
+			setSpotAvailability(new Map());
+			setMarginAvailability(new Map());
+			return;
+		}
+		
+		const tableData: TableData[] = [];
+		exchanges.forEach((exchange) => {
+			tableData.push(...exchange.tableData);
+		});
+		// Sort.
+		tableData.sort((a, b) => {
+			return b.fr - a.fr;
+		});
+		// List all symbols.
+		const symbols = [...new Set(tableData.map((row) => row.symbol))];
+		// Set spot availability for ALL exchanges, not just selected ones.
+		const spotAvailability = new Map<string, Set<string>>();
+		for(const symbol of symbols) {
+			const available = new Set(allExchangeInstances.filter((exchange) => exchange.isSpotAvailable(symbol)).map((exchange) => exchange.name));
+			spotAvailability.set(symbol, available);
+		}
+		setSpotAvailability(spotAvailability);
+		// Set margin availability for ALL exchanges, not just selected ones.
+		const marginAvailability = new Map<string, Set<string>>();
+		for(const symbol of symbols) {
+			const available = new Set(allExchangeInstances.filter((exchange) => exchange.isMarginAvailable(symbol)).map((exchange) => exchange.name));
+			marginAvailability.set(symbol, available);
+		}
+		setMarginAvailability(marginAvailability);
+		setTableData(tableData);
+	}, [lastRefreshed, selectedExchanges, allExchangeInstances]);
+	
+	// Cleanup all exchanges on unmount
+	useEffect(() => {
+		return () => {
+			allExchangeInstances.forEach((exchange) => exchange.destroy());
+		};
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, []);
+	
 	return (
 		<div>
 			<h1 style={{
 					fontSize: '200%',
 					textAlign: 'center',
 				}}>Funding Rate Arbitrage Helper</h1>
+			
+			<Box sx={{ mb: 3, p: 2, bgcolor: 'background.paper', borderRadius: 1, textAlign: 'center' }}>
+				<FormGroup row sx={{ justifyContent: 'center' }}>
+					{allExchanges.map(exchange => (
+						<FormControlLabel
+							key={exchange.name}
+							control={
+								<Checkbox
+									checked={selectedExchanges.has(exchange.name)}
+									onChange={() => handleExchangeToggle(exchange.name)}
+								/>
+							}
+							label={
+								<Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+									<Image
+										src={`/img/${exchange.name.toLowerCase()}.svg`}
+										width={20}
+										height={20}
+										alt={`${exchange.name} exchange logo`}
+									/>
+									{exchange.name}
+								</Box>
+							}
+						/>
+					))}
+				</FormGroup>
+			</Box>
+			
 			<TableContainer component={Paper}>
 				<Table aria-label="simple table">
 					<TableHead>
