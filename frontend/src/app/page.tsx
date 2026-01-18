@@ -33,7 +33,7 @@ import { Aster } from '@/lib/Aster';
 // Define all available exchanges
 const allExchanges = [
 	{ name: 'Hyperliquid', instance: () => new Hyperliquid() },
-	{ name: 'Okx', instance: () => new Okx() },
+	{ name: 'OKX', instance: () => new Okx() },
 	{ name: 'Bybit', instance: () => new Bybit() },
 	{ name: 'Bitget', instance: () => new Bitget() },
 	{ name: 'Binance', instance: () => new Binance() },
@@ -44,6 +44,11 @@ export default function Home() {
 	const [tableData, setTableData] = useState<TableData[]>([]);
 	const [spotAvailability, setSpotAvailability] = useState<Map<string, Set<string>>>(new Map());
 	const [marginAvailability, setMarginAvailability] = useState<Map<string, Set<string>>>(new Map());
+	
+	// Instantiate all exchanges once at page load
+	const [allExchangeInstances] = useState<IExchange[]>(() => 
+		allExchanges.map(e => e.instance())
+	);
 	
 	// Load selected exchanges from localStorage or default to all selected
 	const [selectedExchanges, setSelectedExchanges] = useState<Set<string>>(() => {
@@ -80,9 +85,8 @@ export default function Home() {
 	};
 	
 	useEffect(() => {
-		const exchanges: IExchange[] = allExchanges
-			.filter(e => selectedExchanges.has(e.name))
-			.map(e => e.instance());
+		const exchanges: IExchange[] = allExchangeInstances
+			.filter(e => selectedExchanges.has(e.name));
 		
 		// Don't proceed if no exchanges are selected
 		if (exchanges.length === 0) {
@@ -129,9 +133,15 @@ export default function Home() {
 			if (intervalId !== null) {
 				clearInterval(intervalId);
 			}
-			exchanges.forEach((exchange) => exchange.destroy());
 		};
-	}, [selectedExchanges]);
+	}, [selectedExchanges, allExchangeInstances]);
+	
+	// Cleanup all exchanges on unmount
+	useEffect(() => {
+		return () => {
+			allExchangeInstances.forEach((exchange) => exchange.destroy());
+		};
+	}, [allExchangeInstances]);
 	return (
 		<div>
 			<h1 style={{
@@ -139,9 +149,9 @@ export default function Home() {
 					textAlign: 'center',
 				}}>Funding Rate Arbitrage Helper</h1>
 			
-			<Box sx={{ mb: 3, p: 2, bgcolor: 'background.paper', borderRadius: 1 }}>
-				<h2 style={{ fontSize: '120%', marginBottom: '10px' }}>取引所選択 (Select Exchanges)</h2>
-				<FormGroup row>
+			<Box sx={{ mb: 3, p: 2, bgcolor: 'background.paper', borderRadius: 1, textAlign: 'center' }}>
+				<h2 style={{ fontSize: '120%', marginBottom: '10px' }}>Select Exchanges</h2>
+				<FormGroup row sx={{ justifyContent: 'center' }}>
 					{allExchanges.map(exchange => (
 						<FormControlLabel
 							key={exchange.name}
