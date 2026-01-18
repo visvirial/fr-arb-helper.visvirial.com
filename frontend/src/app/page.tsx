@@ -30,25 +30,29 @@ import { Bitget } from '@/lib/Bitget';
 import { Binance } from '@/lib/Binance';
 import { Aster } from '@/lib/Aster';
 
-// Define all available exchanges
-const allExchanges = [
-	{ name: 'Hyperliquid', instance: () => new Hyperliquid() },
-	{ name: 'OKX', instance: () => new Okx() },
-	{ name: 'Bybit', instance: () => new Bybit() },
-	{ name: 'Bitget', instance: () => new Bitget() },
-	{ name: 'Binance', instance: () => new Binance() },
-	{ name: 'Aster', instance: () => new Aster() },
-];
-
 export default function Home() {
+	const [allExchangeInstances, setAllExchangeInstances] = useState<IExchange[]>([]);
+	const [allExchanges, setAllExchanges] = useState< { name: string; instance: IExchange }[]>([]);
+	useEffect(() => {
+		(async () => {
+			// Define all available exchanges
+			const allExchanges = [
+				{ name: 'Hyperliquid', instance: new Hyperliquid() },
+				{ name: 'OKX'        , instance: new Okx() },
+				{ name: 'Bybit'      , instance: new Bybit() },
+				{ name: 'Bitget'     , instance: new Bitget() },
+				{ name: 'Binance'    , instance: new Binance() },
+				{ name: 'Aster'      , instance: new Aster() },
+			];
+			await Promise.all(allExchanges.map((exchange) => exchange.instance.init()));
+			setAllExchanges(allExchanges);
+			setAllExchangeInstances(allExchanges.map(e => e.instance));
+		})();
+	}, []);
+	
 	const [tableData, setTableData] = useState<TableData[]>([]);
 	const [spotAvailability, setSpotAvailability] = useState<Map<string, Set<string>>>(new Map());
 	const [marginAvailability, setMarginAvailability] = useState<Map<string, Set<string>>>(new Map());
-	
-	// Instantiate all exchanges once at page load
-	const [allExchangeInstances] = useState<IExchange[]>(() => 
-		allExchanges.map(e => e.instance())
-	);
 	
 	// Load selected exchanges from localStorage or default to all selected
 	const [selectedExchanges, setSelectedExchanges] = useState<Set<string>>(() => {
