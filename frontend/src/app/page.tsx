@@ -109,20 +109,13 @@ export default function Home() {
 		});
 	};
 	
-	// Track which exchanges are currently being used
-	const [activeExchanges, setActiveExchanges] = useState<IExchange[]>([]);
-	
-	// Update active exchanges when selection changes
+	// Initialize selected exchanges and setup interval
 	useEffect(() => {
 		const exchanges: IExchange[] = allExchangeInstances
 			.filter(e => selectedExchanges.has(e.name));
-		setActiveExchanges(exchanges);
-	}, [selectedExchanges, allExchangeInstances]);
-	
-	// Initialize selected exchanges and setup interval
-	useEffect(() => {
+		
 		// Don't proceed if no exchanges are selected
-		if (activeExchanges.length === 0) {
+		if (exchanges.length === 0) {
 			setTableData([]);
 			setSpotAvailability(new Map());
 			setMarginAvailability(new Map());
@@ -133,7 +126,7 @@ export default function Home() {
 		
 		const recomputeTableData = () => {
 			const tableData: TableData[] = [];
-			activeExchanges.forEach((exchange) => {
+			exchanges.forEach((exchange) => {
 				tableData.push(...exchange.tableData);
 			});
 			// Sort.
@@ -159,7 +152,7 @@ export default function Home() {
 			setTableData(tableData);
 		};
 		(async () => {
-			await Promise.all(activeExchanges.map((exchange) => exchange.init()));
+			await Promise.all(exchanges.map((exchange) => exchange.init()));
 			intervalId = setInterval(recomputeTableData, 1000);
 		})();
 		return () => {
@@ -167,7 +160,7 @@ export default function Home() {
 				clearInterval(intervalId);
 			}
 		};
-	}, [activeExchanges, allExchangeInstances]);
+	}, [selectedExchanges, allExchangeInstances]);
 	
 	// Cleanup all exchanges on unmount
 	useEffect(() => {
