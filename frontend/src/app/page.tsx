@@ -141,7 +141,8 @@ export default function Home() {
 		return () => {
 			allExchangeInstances.forEach((exchange) => exchange.destroy());
 		};
-	}, [allExchangeInstances]);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, []);
 	return (
 		<div>
 			<h1 style={{
