@@ -13,6 +13,10 @@ import TableBody from '@mui/material/TableBody';
 import TableRow from '@mui/material/TableRow';
 import TableCell from '@mui/material/TableCell';
 import Paper from '@mui/material/Paper';
+import FormGroup from '@mui/material/FormGroup';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import Checkbox from '@mui/material/Checkbox';
+import Box from '@mui/material/Box';
 
 import {
 	numberToHR,
@@ -26,19 +30,55 @@ import { Bitget } from '@/lib/Bitget';
 import { Binance } from '@/lib/Binance';
 import { Aster } from '@/lib/Aster';
 
+// Define all available exchanges
+const allExchanges = [
+	{ name: 'Hyperliquid', instance: () => new Hyperliquid() },
+	{ name: 'Okx', instance: () => new Okx() },
+	{ name: 'Bybit', instance: () => new Bybit() },
+	{ name: 'Bitget', instance: () => new Bitget() },
+	{ name: 'Binance', instance: () => new Binance() },
+	{ name: 'Aster', instance: () => new Aster() },
+];
+
 export default function Home() {
 	const [tableData, setTableData] = useState<TableData[]>([]);
 	const [spotAvailability, setSpotAvailability] = useState<Map<string, Set<string>>>(new Map());
 	const [marginAvailability, setMarginAvailability] = useState<Map<string, Set<string>>>(new Map());
+	
+	// Load selected exchanges from localStorage or default to all selected
+	const [selectedExchanges, setSelectedExchanges] = useState<Set<string>>(() => {
+		if (typeof window !== 'undefined') {
+			const saved = localStorage.getItem('selectedExchanges');
+			if (saved) {
+				return new Set(JSON.parse(saved));
+			}
+		}
+		return new Set(allExchanges.map(e => e.name));
+	});
+	
+	// Save to localStorage whenever selection changes
 	useEffect(() => {
-		const exchanges: IExchange[] = [
-			new Hyperliquid(),
-			new Okx(),
-			new Bybit(),
-			new Bitget(),
-			new Binance(),
-			new Aster(),
-		];
+		if (typeof window !== 'undefined') {
+			localStorage.setItem('selectedExchanges', JSON.stringify([...selectedExchanges]));
+		}
+	}, [selectedExchanges]);
+	
+	const handleExchangeToggle = (exchangeName: string) => {
+		setSelectedExchanges(prev => {
+			const newSet = new Set(prev);
+			if (newSet.has(exchangeName)) {
+				newSet.delete(exchangeName);
+			} else {
+				newSet.add(exchangeName);
+			}
+			return newSet;
+		});
+	};
+	
+	useEffect(() => {
+		const exchanges: IExchange[] = allExchanges
+			.filter(e => selectedExchanges.has(e.name))
+			.map(e => e.instance());
 		const recomputeTableData = () => {
 			const tableData: TableData[] = [];
 			exchanges.forEach((exchange) => {
@@ -73,13 +113,42 @@ export default function Home() {
 		return () => {
 			exchanges.forEach((exchange) => exchange.destroy());
 		};
-	}, []);
+	}, [selectedExchanges]);
 	return (
 		<div>
 			<h1 style={{
 					fontSize: '200%',
 					textAlign: 'center',
 				}}>Funding Rate Arbitrage Helper</h1>
+			
+			<Box sx={{ mb: 3, p: 2, bgcolor: 'background.paper', borderRadius: 1 }}>
+				<h2 style={{ fontSize: '120%', marginBottom: '10px' }}>取引所選択 (Select Exchanges)</h2>
+				<FormGroup row>
+					{allExchanges.map(exchange => (
+						<FormControlLabel
+							key={exchange.name}
+							control={
+								<Checkbox
+									checked={selectedExchanges.has(exchange.name)}
+									onChange={() => handleExchangeToggle(exchange.name)}
+								/>
+							}
+							label={
+								<Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+									<Image
+										src={`/img/${exchange.name.toLowerCase()}.svg`}
+										width={20}
+										height={20}
+										alt={`${exchange.name} exchange logo`}
+									/>
+									{exchange.name}
+								</Box>
+							}
+						/>
+					))}
+				</FormGroup>
+			</Box>
+			
 			<TableContainer component={Paper}>
 				<Table aria-label="simple table">
 					<TableHead>
