@@ -52,35 +52,50 @@ export default function Home() {
 	
 	// Load selected exchanges from localStorage or default to all selected
 	const [selectedExchanges, setSelectedExchanges] = useState<Set<string>>(() => {
-		// Default to all exchanges selected (same for SSR and client initial render)
+		// During SSR, return empty set to avoid hydration mismatch
+		if (typeof window === 'undefined') {
+			return new Set<string>();
+		}
+		try {
+			const saved = localStorage.getItem('selectedExchanges');
+			if (saved) {
+				return new Set(JSON.parse(saved));
+			}
+		} catch (error) {
+			console.error('Failed to load selected exchanges from localStorage:', error);
+		}
 		return new Set(allExchanges.map(e => e.name));
 	});
 	
-	// Track if we've loaded from localStorage
-	const [hasLoadedFromStorage, setHasLoadedFromStorage] = useState(false);
+	// Initialize from localStorage on mount (client-side only)
+	const [isClient, setIsClient] = useState(false);
 	
-	// Load from localStorage on mount (client-side only)
 	useEffect(() => {
-		if (!hasLoadedFromStorage && typeof window !== 'undefined') {
+		setIsClient(true);
+		// If selectedExchanges is empty (from SSR), load from localStorage or set all
+		if (selectedExchanges.size === 0) {
 			try {
 				const saved = localStorage.getItem('selectedExchanges');
 				if (saved) {
-					const parsed = JSON.parse(saved);
-					setSelectedExchanges(new Set(parsed));
+					setSelectedExchanges(new Set(JSON.parse(saved)));
+				} else {
+					setSelectedExchanges(new Set(allExchanges.map(e => e.name)));
 				}
 			} catch (error) {
 				console.error('Failed to load selected exchanges from localStorage:', error);
+				setSelectedExchanges(new Set(allExchanges.map(e => e.name)));
 			}
-			setHasLoadedFromStorage(true);
 		}
-	}, [hasLoadedFromStorage]);
+		// Intentionally omit selectedExchanges and allExchanges from deps - this should only run once on mount
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, []);
 	
-	// Save to localStorage whenever selection changes (client-side only, after initial load)
+	// Save to localStorage whenever selection changes (client-side only)
 	useEffect(() => {
-		if (hasLoadedFromStorage && typeof window !== 'undefined') {
+		if (isClient) {
 			localStorage.setItem('selectedExchanges', JSON.stringify([...selectedExchanges]));
 		}
-	}, [selectedExchanges, hasLoadedFromStorage]);
+	}, [selectedExchanges, isClient]);
 	
 	const handleExchangeToggle = (exchangeName: string) => {
 		setSelectedExchanges(prev => {
