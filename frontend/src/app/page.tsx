@@ -86,6 +86,7 @@ export default function Home() {
 				setSelectedExchanges(new Set(allExchanges.map(e => e.name)));
 			}
 		}
+		// Intentionally omit selectedExchanges and allExchanges from deps - this should only run once on mount
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 	
