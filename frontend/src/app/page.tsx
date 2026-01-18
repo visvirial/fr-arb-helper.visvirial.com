@@ -52,25 +52,49 @@ export default function Home() {
 	
 	// Load selected exchanges from localStorage or default to all selected
 	const [selectedExchanges, setSelectedExchanges] = useState<Set<string>>(() => {
-		if (typeof window !== 'undefined') {
-			try {
-				const saved = localStorage.getItem('selectedExchanges');
-				if (saved) {
-					return new Set(JSON.parse(saved));
-				}
-			} catch (error) {
-				console.error('Failed to load selected exchanges from localStorage:', error);
+		// During SSR, return empty set to avoid hydration mismatch
+		if (typeof window === 'undefined') {
+			return new Set<string>();
+		}
+		try {
+			const saved = localStorage.getItem('selectedExchanges');
+			if (saved) {
+				return new Set(JSON.parse(saved));
 			}
+		} catch (error) {
+			console.error('Failed to load selected exchanges from localStorage:', error);
 		}
 		return new Set(allExchanges.map(e => e.name));
 	});
 	
-	// Save to localStorage whenever selection changes
+	// Initialize from localStorage on mount (client-side only)
+	const [isClient, setIsClient] = useState(false);
+	
 	useEffect(() => {
-		if (typeof window !== 'undefined') {
+		setIsClient(true);
+		// If selectedExchanges is empty (from SSR), load from localStorage or set all
+		if (selectedExchanges.size === 0) {
+			try {
+				const saved = localStorage.getItem('selectedExchanges');
+				if (saved) {
+					setSelectedExchanges(new Set(JSON.parse(saved)));
+				} else {
+					setSelectedExchanges(new Set(allExchanges.map(e => e.name)));
+				}
+			} catch (error) {
+				console.error('Failed to load selected exchanges from localStorage:', error);
+				setSelectedExchanges(new Set(allExchanges.map(e => e.name)));
+			}
+		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, []);
+	
+	// Save to localStorage whenever selection changes (client-side only)
+	useEffect(() => {
+		if (isClient) {
 			localStorage.setItem('selectedExchanges', JSON.stringify([...selectedExchanges]));
 		}
-	}, [selectedExchanges]);
+	}, [selectedExchanges, isClient]);
 	
 	const handleExchangeToggle = (exchangeName: string) => {
 		setSelectedExchanges(prev => {
@@ -109,17 +133,17 @@ export default function Home() {
 			});
 			// List all symbols.
 			const symbols = [...new Set(tableData.map((row) => row.symbol))];
-			// Set spot availability.
+			// Set spot availability for ALL exchanges, not just selected ones.
 			const spotAvailability = new Map<string, Set<string>>();
 			for(const symbol of symbols) {
-				const available = new Set(exchanges.filter((exchange) => exchange.isSpotAvailable(symbol)).map((exchange) => exchange.name));
+				const available = new Set(allExchangeInstances.filter((exchange) => exchange.isSpotAvailable(symbol)).map((exchange) => exchange.name));
 				spotAvailability.set(symbol, available);
 			}
 			setSpotAvailability(spotAvailability);
-			// Set margin availability.
+			// Set margin availability for ALL exchanges, not just selected ones.
 			const marginAvailability = new Map<string, Set<string>>();
 			for(const symbol of symbols) {
-				const available = new Set(exchanges.filter((exchange) => exchange.isMarginAvailable(symbol)).map((exchange) => exchange.name));
+				const available = new Set(allExchangeInstances.filter((exchange) => exchange.isMarginAvailable(symbol)).map((exchange) => exchange.name));
 				marginAvailability.set(symbol, available);
 			}
 			setMarginAvailability(marginAvailability);
