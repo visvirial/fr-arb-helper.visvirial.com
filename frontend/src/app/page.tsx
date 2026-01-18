@@ -48,9 +48,13 @@ export default function Home() {
 	// Load selected exchanges from localStorage or default to all selected
 	const [selectedExchanges, setSelectedExchanges] = useState<Set<string>>(() => {
 		if (typeof window !== 'undefined') {
-			const saved = localStorage.getItem('selectedExchanges');
-			if (saved) {
-				return new Set(JSON.parse(saved));
+			try {
+				const saved = localStorage.getItem('selectedExchanges');
+				if (saved) {
+					return new Set(JSON.parse(saved));
+				}
+			} catch (error) {
+				console.error('Failed to load selected exchanges from localStorage:', error);
 			}
 		}
 		return new Set(allExchanges.map(e => e.name));
@@ -79,6 +83,17 @@ export default function Home() {
 		const exchanges: IExchange[] = allExchanges
 			.filter(e => selectedExchanges.has(e.name))
 			.map(e => e.instance());
+		
+		// Don't proceed if no exchanges are selected
+		if (exchanges.length === 0) {
+			setTableData([]);
+			setSpotAvailability(new Map());
+			setMarginAvailability(new Map());
+			return;
+		}
+		
+		let intervalId: ReturnType<typeof setInterval> | null = null;
+		
 		const recomputeTableData = () => {
 			const tableData: TableData[] = [];
 			exchanges.forEach((exchange) => {
@@ -108,9 +123,12 @@ export default function Home() {
 		};
 		(async () => {
 			await Promise.all(exchanges.map((exchange) => exchange.init()));
-			setInterval(recomputeTableData, 1000);
+			intervalId = setInterval(recomputeTableData, 1000);
 		})();
 		return () => {
+			if (intervalId !== null) {
+				clearInterval(intervalId);
+			}
 			exchanges.forEach((exchange) => exchange.destroy());
 		};
 	}, [selectedExchanges]);
