@@ -13,6 +13,7 @@ export function numberToHR(n: number, digits: number = 5) {
 export interface TableData {
 	exchange: string;
 	symbol: string;
+	market?: string;
 	fr: number;
 	markPrice: number;
 	indexPrice: number;

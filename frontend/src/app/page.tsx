@@ -222,7 +222,7 @@ export default function Home() {
 						{[...tableData.entries()].map(([index, row]) => {
 							return (
 								<TableRow
-									key={`${row.exchange}-${row.symbol}`}
+									key={`${row.exchange}-${row.symbol}-${row.market ?? ''}`}
 								>
 									<TableCell>{(index+1).toLocaleString()}</TableCell>
 									<TableCell
@@ -242,7 +242,7 @@ export default function Home() {
 											}}
 										/>
 									</TableCell>
-									<TableCell>{row.symbol}</TableCell>
+									<TableCell>{row.symbol + (row.market ? ` (${row.market})` : '')}</TableCell>
 									<TableCell align="right">{row.fr.toFixed(2)}%</TableCell>
 									<TableCell align="right">{(row.fr / 365 / 3).toFixed(4)}%</TableCell>
 									<TableCell align="right">{(row.fr / 365 / 24).toFixed(4)}%</TableCell>
