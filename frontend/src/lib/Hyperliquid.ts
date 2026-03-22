@@ -15,7 +15,7 @@ export interface HLDataMeta {
 export interface HLDataAssetCtxs {
 	dayNtlVlm: string;
 	funding: string;
-	impactPxs: string[2];
+	impactPxs: [string, string];
 	markPx: string;
 	midPx: string;
 	openInterest: string;
@@ -37,12 +37,9 @@ export class Hyperliquid extends EventTarget implements IExchange {
 	
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	private _spotMeta: any;
-	private _metaAndAssetCtxs: HLDataMetaAndAssetCtxs = [
-		{
-			universe: [],
-		},
-		[],
-	];
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	private _perpDexs: any;
+	private _metaAndAssetCtxs: { [dexName: string]: HLDataMetaAndAssetCtxs } = {};
 	private _intervalId: ReturnType<typeof setInterval> | null = null;
 	
 	constructor(
@@ -54,6 +51,9 @@ export class Hyperliquid extends EventTarget implements IExchange {
 	public async init() {
 		this._spotMeta = await this.fetch({
 			type: 'spotMeta',
+		});
+		this._perpDexs = await this.fetch({
+			type: 'perpDexs',
 		});
 		await this.fetchMetaAndAssetCtxs();
 		this._intervalId = setInterval(async () => {
@@ -68,6 +68,15 @@ export class Hyperliquid extends EventTarget implements IExchange {
 		}
 	}
 	
+	public get dexNames(): string[] {
+		const dexNames: string[] = ['default'];
+		for(const dex of this._perpDexs) {
+			if(!dex) continue;
+			dexNames.push(dex.name);
+		}
+		return dexNames;
+	}
+	
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	public async fetch(body: any) {
 		const result = await (await fetch(this.restEndpoint, {
@@ -80,11 +89,19 @@ export class Hyperliquid extends EventTarget implements IExchange {
 		return result;
 	}
 	
-	public async fetchMetaAndAssetCtxs() {
-		this._metaAndAssetCtxs = await this.fetch({
+	public async fetchMetaAndAssetCtxsForDex(dexName: string) {
+		this._metaAndAssetCtxs[dexName] = await this.fetch({
 			type: 'metaAndAssetCtxs',
+			dex: (dexName === 'default' ? '' : dexName),
 		});
 		this.dispatchEvent(new Event('metaAndAssetCtxs'));
+		return this._metaAndAssetCtxs[dexName];
+	}
+	
+	public async fetchMetaAndAssetCtxs() {
+		for(const dexName of this.dexNames) {
+			await this.fetchMetaAndAssetCtxsForDex(dexName);
+		}
 		return this._metaAndAssetCtxs;
 	}
 	
@@ -93,8 +110,14 @@ export class Hyperliquid extends EventTarget implements IExchange {
 	}
 	
 	public isSpotAvailable(symbol: string): boolean {
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		return this._spotMeta.universe.some((meta: any) => meta.name === `${symbol}/USDC`);
+		return (
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			this._spotMeta.universe.some((meta: any) => meta.name === `${symbol}/USDC`) ||
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			this._spotMeta.universe.some((meta: any) => meta.name === `${symbol}/USDT`) ||
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			this._spotMeta.universe.some((meta: any) => meta.name === `${symbol}/USDH`)
+		);
 	}
 	
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -104,21 +127,32 @@ export class Hyperliquid extends EventTarget implements IExchange {
 	
 	public get tableData(): TableData[] {
 		const tableData: TableData[] = [];
-		const [metas, assetCtxs] = this.metaAndAssetCtxs;
-		for(let i=0; i<metas.universe.length; i++) {
-			const meta = metas.universe[i];
-			const assetCtx = assetCtxs[i];
-			tableData.push({
-				exchange: this.name,
-				symbol: meta.name,
-				fr: +assetCtx.funding * 24 * 365 * 100,
-				markPrice: +assetCtx.markPx,
-				indexPrice: +assetCtx.oraclePx,
-				oi: +assetCtx.openInterest * +assetCtx.markPx,
-			});
+		for(const dexName of this.dexNames) {
+			//if(!this.metaAndAssetCtxs[dexName]) continue;
+			const [metas, assetCtxs] = this.metaAndAssetCtxs[dexName];
+			for(let i=0; i<metas.universe.length; i++) {
+				const meta = metas.universe[i];
+				const assetCtx = assetCtxs[i];
+				const [symbol, market] = (() => {
+					if(meta.name.includes(':')) {
+						const [dexName, symbol] = meta.name.split(':');
+						return [symbol, dexName];
+					} else {
+						return [meta.name, undefined];
+					}
+				})();
+				tableData.push({
+					exchange: this.name,
+					symbol,
+					market,
+					fr: +assetCtx.funding * 24 * 365 * 100,
+					markPrice: +assetCtx.markPx,
+					indexPrice: +assetCtx.oraclePx,
+					oi: +assetCtx.openInterest * +assetCtx.markPx,
+				});
+			}
 		}
 		return tableData;
 	}
 	
 }
-
