@@ -248,14 +248,14 @@ export default function Home() {
 									<TableCell align="right">{(row.fr / 365 / 24).toFixed(4)}%</TableCell>
 									<TableCell
 										style={{
-											color: row.markPrice > row.indexPrice ? 'green' : 'red',
+											color: row.markPrice === row.indexPrice ? 'gray' : row.markPrice > row.indexPrice ? 'green' : 'red',
 										}}
 									>${numberToHR(row.markPrice)}</TableCell>
 									<TableCell>${numberToHR(row.indexPrice)}</TableCell>
 									<TableCell
 										align="right"
 										style={{
-											color: row.markPrice > row.indexPrice ? 'green' : 'red',
+											color: row.markPrice === row.indexPrice ? 'gray' : row.markPrice > row.indexPrice ? 'green' : 'red',
 										}}
 									>{((row.markPrice - row.indexPrice) / (row.markPrice + row.indexPrice) * 2 * 100).toFixed(4)}%</TableCell>
 									<TableCell>{row.oi === 0 ? 'N/A' : '$' + numberToHR(row.oi)}</TableCell>
