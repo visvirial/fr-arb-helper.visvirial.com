@@ -58,7 +58,7 @@ export class Hyperliquid extends EventTarget implements IExchange {
 		await this.fetchMetaAndAssetCtxs();
 		this._intervalId = setInterval(async () => {
 			await this.fetchMetaAndAssetCtxs();
-		}, 5 * 1000);
+		}, 15 * 1000);
 	}
 	
 	public destroy() {
@@ -78,17 +78,26 @@ export class Hyperliquid extends EventTarget implements IExchange {
 	}
 	
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	public async fetch(body: any) {
-		const result = await (await fetch(this.restEndpoint, {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json',
-			},
-			body: JSON.stringify(body),
-		})).json();
-		return result;
+	public async fetch(body: any, retries = 4, backoffMs = 2000) {
+		for(let attempt = 0; attempt <= retries; attempt++) {
+			const response = await fetch(this.restEndpoint, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify(body),
+			});
+			if(response.status === 429) {
+				if(attempt < retries) {
+					await new Promise(resolve => setTimeout(resolve, backoffMs * Math.pow(2, attempt)));
+					continue;
+				}
+				throw new Error('Hyperliquid: Too Many Requests');
+			}
+			return response.json();
+		}
 	}
-	
+
 	public async fetchMetaAndAssetCtxsForDex(dexName: string) {
 		this._metaAndAssetCtxs[dexName] = await this.fetch({
 			type: 'metaAndAssetCtxs',
@@ -97,10 +106,14 @@ export class Hyperliquid extends EventTarget implements IExchange {
 		this.dispatchEvent(new Event('metaAndAssetCtxs'));
 		return this._metaAndAssetCtxs[dexName];
 	}
-	
+
 	public async fetchMetaAndAssetCtxs() {
-		for(const dexName of this.dexNames) {
-			await this.fetchMetaAndAssetCtxsForDex(dexName);
+		const dexNames = this.dexNames;
+		for(let i = 0; i < dexNames.length; i++) {
+			if(i > 0) {
+				await new Promise(resolve => setTimeout(resolve, 300));
+			}
+			await this.fetchMetaAndAssetCtxsForDex(dexNames[i]);
 		}
 		return this._metaAndAssetCtxs;
 	}
